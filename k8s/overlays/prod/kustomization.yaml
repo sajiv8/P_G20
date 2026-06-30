@@ -1,0 +1,12 @@
+namespace: p-g20
+
+resources:
+  - ../../base
+
+images:
+  - name: ghcr.io/sajiv8/p-g20
+    newTag: deploy-1
+
+commonAnnotations:
+  p-g20.io/build-sha: initial
+  p-g20.io/release-slot: "1"

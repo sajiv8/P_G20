@@ -1,0 +1,131 @@
+name: ci-cd
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - k8s/overlays/prod/kustomization.yaml
+      - k8s/overlays/prod/deploy-history.json
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/p-g20
+  KUSTOMIZATION_FILE: k8s/overlays/prod/kustomization.yaml
+  HISTORY_FILE: k8s/overlays/prod/deploy-history.json
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Update release history and rollout annotation
+        id: release
+        shell: bash
+        env:
+          NEW_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+
+          history_path = pathlib.Path(os.environ["HISTORY_FILE"])
+          kustomization_path = pathlib.Path(os.environ["KUSTOMIZATION_FILE"])
+          current_sha = os.environ["GITHUB_SHA"]
+          current_digest = os.environ["NEW_DIGEST"]
+
+          history = []
+          if history_path.exists():
+              raw = history_path.read_text(encoding="utf-8").strip()
+              if raw:
+                  history = json.loads(raw)
+
+          previous_1 = history[0]["digest"] if len(history) > 0 else ""
+          previous_2 = history[1]["digest"] if len(history) > 1 else ""
+
+          history = [
+              {
+                  "sha": current_sha,
+                  "digest": current_digest,
+                  "slot": 1,
+              }
+          ] + history[:2]
+
+          history_path.write_text(json.dumps(history, indent=2) + "\n", encoding="utf-8")
+
+          text = kustomization_path.read_text(encoding="utf-8")
+          text = re.sub(
+              r"(p-g20\.io/build-sha:\s*).*$",
+              rf"\g<1>{current_sha}",
+              text,
+              flags=re.MULTILINE,
+          )
+          text = re.sub(
+              r"(p-g20\.io/release-slot:\s*).*$",
+              r"\g<1>1",
+              text,
+              flags=re.MULTILINE,
+          )
+          kustomization_path.write_text(text, encoding="utf-8")
+
+          output = pathlib.Path(os.environ["GITHUB_OUTPUT"])
+          output.write_text(
+              "current_digest=" + current_digest + "\n"
+              + "previous_digest_1=" + previous_1 + "\n"
+              + "previous_digest_2=" + previous_2 + "\n"
+              + "current_sha=" + current_sha + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Promote release tags
+        shell: bash
+        run: |
+          docker buildx imagetools create --tag "${IMAGE_NAME}:deploy-1" "${IMAGE_NAME}@${{ steps.release.outputs.current_digest }}"
+
+          if [ -n "${{ steps.release.outputs.previous_digest_1 }}" ]; then
+            docker buildx imagetools create --tag "${IMAGE_NAME}:deploy-2" "${IMAGE_NAME}@${{ steps.release.outputs.previous_digest_1 }}"
+          fi
+
+          if [ -n "${{ steps.release.outputs.previous_digest_2 }}" ]; then
+            docker buildx imagetools create --tag "${IMAGE_NAME}:deploy-3" "${IMAGE_NAME}@${{ steps.release.outputs.previous_digest_2 }}"
+          fi
+
+      - name: Commit release state back to Git
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${KUSTOMIZATION_FILE}" "${HISTORY_FILE}"
+          git commit -m "chore: record deploy ${GITHUB_SHA} [skip ci]" || exit 0
+          git push
