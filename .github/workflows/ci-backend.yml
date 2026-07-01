@@ -1,0 +1,164 @@
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  Backend Services CI Pipeline                                ║
+# ║  Trigger: main branch එකට push කළ විට                      ║
+# ║  කාර්යය: Build → Test → Docker Build → GHCR Push           ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+name: Backend CI Pipeline
+
+# ---- TRIGGER: මොන event එකට run වෙනවද? ----
+on:
+  push:
+    branches: [main]
+    paths:
+      # services/ folder එකේ changes ආවොත් පමණක් trigger වෙනවා
+      # README.md edit කළොත් pipeline run වෙන්නේ නෑ (cost save)
+      - 'services/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'services/**'
+
+# ---- ENVIRONMENT VARIABLES ----
+env:
+  REGISTRY: ghcr.io
+  # ⚠️ ඔබේ GitHub username/org name එකට වෙනස් කරන්න (lowercase!)
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+
+# ---- JOBS ----
+jobs:
+  # ╔══════════════════════════════════════════════════════════╗
+  # ║  Job 1: වෙනස් වූ services detect කරමු                   ║
+  # ╚══════════════════════════════════════════════════════════╝
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      # Matrix strategy එකට pass කරන services list
+      services: ${{ steps.filter.outputs.services }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Previous commit එකත් fetch කරමු comparison සඳහා
+
+      - name: Detect changed services
+        id: filter
+        run: |
+          # Changed files detect කරමු (current commit vs previous)
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git diff --name-only HEAD)
+          echo "Changed files: $CHANGED_FILES"
+          
+          # services/ folder එකේ changed services detect කරමු
+          SERVICES=()
+          for dir in services/*/; do
+            SERVICE_NAME=$(basename "$dir")
+            if echo "$CHANGED_FILES" | grep -q "services/$SERVICE_NAME/"; then
+              SERVICES+=("\"$SERVICE_NAME\"")
+            fi
+          done
+          
+          # JSON array format එකට convert කරමු
+          if [ ${#SERVICES[@]} -eq 0 ]; then
+            # Changes detect වුණේ නැත්නම් (first push) සියලු services build කරමු
+            SERVICES_JSON='["tenant-service","user-service","resource-service","booking-service","notification-service","api-gateway"]'
+          else
+            SERVICES_JSON="[$(IFS=,; echo "${SERVICES[*]}")]"
+          fi
+          
+          echo "services=$SERVICES_JSON" >> $GITHUB_OUTPUT
+          echo "🔍 Services to build: $SERVICES_JSON"
+
+  # ╔══════════════════════════════════════════════════════════╗
+  # ║  Job 2: Build + Test + Docker Push                       ║
+  # ║  Matrix strategy: detected services parallelly build     ║
+  # ╚══════════════════════════════════════════════════════════╝
+  build-and-push:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.services != '[]'
+    runs-on: ubuntu-latest
+    
+    # Matrix strategy: detect කළ services list එකේ
+    # සෑම service එකකටම parallel job එකක් run වෙනවා
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
+    
+    # GHCR push කිරීමට permissions
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # Step 1: Code checkout
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Node.js setup (v22 LTS)
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Step 3: Dependencies install
+      - name: 📚 Install dependencies
+        working-directory: services/${{ matrix.service }}
+        run: npm ci
+
+      # Step 4: TypeScript → JavaScript compile
+      - name: 🔨 Build TypeScript
+        working-directory: services/${{ matrix.service }}
+        run: npm run build
+
+      # Step 5: Tests run
+      - name: 🧪 Run tests
+        working-directory: services/${{ matrix.service }}
+        run: npm test
+
+      # Step 6: Docker Buildx setup (advanced Docker build engine)
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Step 7: GHCR login
+      - name: 🔑 Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          # GITHUB_ACTOR = push කළ user
+          username: ${{ github.actor }}
+          # GITHUB_TOKEN = GitHub auto-generate කරන temporary token
+          # ⭐ PAT එකක් manually set කරන්න ඕනේ නෑ!
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 8: Docker image metadata generate (tags, labels)
+      - name: 🏷️ Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}
+          tags: |
+            # Git SHA tag (unique per commit — e.g. "a1b2c3d")
+            type=sha,prefix=,format=short
+            # latest tag (main branch push පමණක්)
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Step 9: Docker image build & GHCR push
+      - name: 🚀 Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: services/${{ matrix.service }}
+          # main branch push එකේදී පමණක් GHCR push කරනවා
+          # PR එකේදී build test කරනවා push කරන්නේ නෑ
+          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Build cache enable (subsequent builds faster)
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Step 10: Build summary (GitHub UI එකේ summary tab එකේ පෙන්නයි)
+      - name: 📋 Build Summary
+        run: |
+          echo "## ✅ ${{ matrix.service }} Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image:** ${{ env.IMAGE_PREFIX }}/${{ matrix.service }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
