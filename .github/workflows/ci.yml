@@ -1,131 +1,92 @@
-# ============================================================================
-# GitHub Actions CI Pipeline — Campus RSO Platform
-# ============================================================================
-# Triggers on push to main branch
-# Builds Docker images for all microservices and pushes to GHCR
-# ============================================================================
+# ============================================================
+# EXAMPLE GITHUB ACTIONS WORKFLOW
+# Save this file as: .github/workflows/test.yml (in your repo root)
+# ============================================================
+# GitHub Actions automatically runs any .yml file inside
+# .github/workflows/ whenever the trigger conditions below are met.
 
-name: CI — Build & Push Docker Images
+# "name" is just a label — shows up in the Actions tab on GitHub.
+name: Test CI
 
+# ------------------------------------------------------------
+# WHEN should this workflow run? (the trigger)
+# ------------------------------------------------------------
 on:
   push:
-    branches: [main]
+    branches: [ "main" ]        # runs when you push to main
   pull_request:
-    branches: [main]
+    branches: [ "main" ]        # runs when a PR targets main
+  workflow_dispatch:            # adds a "Run workflow" button so you
+                                 # can trigger it manually from the UI
 
+# ------------------------------------------------------------
+# Environment variables available to every job in this workflow
+# ------------------------------------------------------------
 env:
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/rso
+  NODE_ENV: test
 
+# ------------------------------------------------------------
+# JOBS — each job runs on its own fresh virtual machine (runner).
+# Jobs run in PARALLEL by default, unless you use "needs:".
+# ------------------------------------------------------------
 jobs:
-  # --------------------------------------------------------------------------
-  # Build Frontend
-  # --------------------------------------------------------------------------
-  build-frontend:
-    name: Build Frontend
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest        # the OS image for this job's runner
+
+    # Matrix = run this same job multiple times with different inputs.
+    # Here it will run twice: once per Node version.
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
     steps:
-      - name: Checkout code
+      # "steps" run sequentially, top to bottom, inside the job.
+
+      # 1. Get your repo's code onto the runner.
+      #    Actions marketplace steps are referenced as owner/repo@version.
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      # 2. Set up Node.js using the version from the matrix above.
+      - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'          # caches node_modules between runs (faster)
 
+      # 3. Install dependencies. "run" executes shell commands directly.
       - name: Install dependencies
         run: npm ci
 
-      - name: Build frontend
-        run: npm run build -w frontend
+      # 4. Lint (optional, but common in real pipelines).
+      - name: Run linter
+        run: npm run lint --if-present
 
-      - name: Log in to GHCR
-        if: github.event_name == 'push'
-        uses: docker/login-action@v3
+      # 5. Run your test suite.
+      - name: Run tests
+        run: npm test
+
+      # 6. Upload test results/coverage as a downloadable artifact,
+      #    viewable from the workflow run summary page.
+      - name: Upload coverage report
+        if: always()             # run even if the tests above failed
+        uses: actions/upload-artifact@v4
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          name: coverage-report-${{ matrix.node-version }}
+          path: coverage/
+          if-no-files-found: ignore
 
-      - name: Build & Push Frontend image
-        if: github.event_name == 'push'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: frontend/Dockerfile
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-frontend:latest
-            ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
-
-  # --------------------------------------------------------------------------
-  # Build Backend Services (matrix strategy)
-  # --------------------------------------------------------------------------
-  build-services:
-    name: Build ${{ matrix.service }}
+  # ------------------------------------------------------------
+  # A second job that only runs AFTER build-and-test succeeds.
+  # Demonstrates job dependencies with "needs".
+  # ------------------------------------------------------------
+  notify:
+    name: Notify success
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      matrix:
-        service:
-          - tenant-service
-          - user-service
-          - resource-service
-          - booking-service
-          - notification-service
+    needs: build-and-test        # waits for the job above to finish
+    if: success()                # only runs if it passed
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to GHCR
-        if: github.event_name == 'push'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build & Push ${{ matrix.service }}
-        if: github.event_name == 'push'
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: backend/services/${{ matrix.service }}/Dockerfile
-          push: true
-          tags: |
-            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
-            ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
-
-  # --------------------------------------------------------------------------
-  # Update Kubernetes manifests with new image tags
-  # --------------------------------------------------------------------------
-  update-manifests:
-    name: Update K8s Manifests
-    needs: [build-frontend, build-services]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Update image tags in Kustomization
-        run: |
-          cd k8s/overlays/production
-          sed -i "s|newTag:.*|newTag: ${{ github.sha }}|g" kustomization.yaml
-
-      - name: Commit and push changes
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add k8s/overlays/production/kustomization.yaml
-          git diff --staged --quiet || git commit -m "ci: update image tags to ${{ github.sha }}"
-          git push
+      - name: Print message
+        run: echo "All tests passed on every Node version! ✅"
