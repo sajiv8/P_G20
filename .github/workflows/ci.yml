@@ -1,92 +1,11 @@
-# ============================================================
-# EXAMPLE GITHUB ACTIONS WORKFLOW
-# Save this file as: .github/workflows/test.yml (in your repo root)
-# ============================================================
-# GitHub Actions automatically runs any .yml file inside
-# .github/workflows/ whenever the trigger conditions below are met.
+name: CI — Build & Push Docker Images
 
-# "name" is just a label — shows up in the Actions tab on GitHub.
-name: Test CI
-
-# ------------------------------------------------------------
-# WHEN should this workflow run? (the trigger)
-# ------------------------------------------------------------
 on:
   push:
-    branches: [ "main" ]        # runs when you push to main
+    branches: [main]
   pull_request:
-    branches: [ "main" ]        # runs when a PR targets main
-  workflow_dispatch:            # adds a "Run workflow" button so you
-                                 # can trigger it manually from the UI
+    branches: [main]
 
-# ------------------------------------------------------------
-# Environment variables available to every job in this workflow
-# ------------------------------------------------------------
 env:
-  NODE_ENV: test
-
-# ------------------------------------------------------------
-# JOBS — each job runs on its own fresh virtual machine (runner).
-# Jobs run in PARALLEL by default, unless you use "needs:".
-# ------------------------------------------------------------
-jobs:
-
-  build-and-test:
-    name: Build & Test
-    runs-on: ubuntu-latest        # the OS image for this job's runner
-
-    # Matrix = run this same job multiple times with different inputs.
-    # Here it will run twice: once per Node version.
-    strategy:
-      matrix:
-        node-version: [18.x, 20.x]
-
-    steps:
-      # "steps" run sequentially, top to bottom, inside the job.
-
-      # 1. Get your repo's code onto the runner.
-      #    Actions marketplace steps are referenced as owner/repo@version.
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # 2. Set up Node.js using the version from the matrix above.
-      - name: Set up Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'npm'          # caches node_modules between runs (faster)
-
-      # 3. Install dependencies. "run" executes shell commands directly.
-      - name: Install dependencies
-        run: npm ci
-
-      # 4. Lint (optional, but common in real pipelines).
-      - name: Run linter
-        run: npm run lint --if-present
-
-      # 5. Run your test suite.
-      - name: Run tests
-        run: npm test
-
-      # 6. Upload test results/coverage as a downloadable artifact,
-      #    viewable from the workflow run summary page.
-      - name: Upload coverage report
-        if: always()             # run even if the tests above failed
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report-${{ matrix.node-version }}
-          path: coverage/
-          if-no-files-found: ignore
-
-  # ------------------------------------------------------------
-  # A second job that only runs AFTER build-and-test succeeds.
-  # Demonstrates job dependencies with "needs".
-  # ------------------------------------------------------------
-  notify:
-    name: Notify success
-    runs-on: ubuntu-latest
-    needs: build-and-test        # waits for the job above to finish
-    if: success()                # only runs if it passed
-    steps:
-      - name: Print message
-        run: echo "All tests passed on every Node version! ✅"
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/rso
