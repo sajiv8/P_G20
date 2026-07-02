@@ -54,3 +54,6 @@ temp/
 codereviewpart1.md
 guide.md
 keys.txt
+firebase-service-account.json
+firebase.txt
+supabase.txt
