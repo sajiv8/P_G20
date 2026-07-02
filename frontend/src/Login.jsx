@@ -17,9 +17,12 @@ export default function Login() {
     <div style={styles.container}>
       <form onSubmit={handleSubmit} style={styles.form}>
 
-        <div style={styles.welcome}>
+        <div style={styles.capContainer}>
           <FaGraduationCap style={styles.cap} />
-          <h3>Welcome Back</h3>
+        </div>
+
+        <div style={styles.welcome}>
+          <h1>Welcome Back</h1>
           Sign in to your account
         </div>
 
@@ -101,11 +104,12 @@ const styles = {
   welcome:{
     textAlign: "center",
     marginBottom: "30px",
-    marginTop: "30px",
   },
 
   cap: {
     fontSize: "60px",
+    alignSelf: "center",
+    textAlign: "center",
 
   },
 
@@ -126,13 +130,23 @@ const styles = {
     alignSelf: "center",
   },
 
+  capContainer: {
+    width:80,
+    height:70,
+    alignSelf: "center",
+    borderRadius: "20%",
+    textAlign: "center",
+    background: "linear-gradient(to right, #6a66f0, #2e2279)",
+  },
+
   button: {
     borderRadius: "10px",
     padding: "10px",
-    background: "blue",
+    background: "linear-gradient(to right, #6a66f0, #2e2279)",
     color: "white",
     border: "none",
     cursor: "pointer",
     margin: "10px 0",
+    
   },
 };
