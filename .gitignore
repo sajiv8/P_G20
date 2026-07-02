@@ -49,3 +49,8 @@ coverage/
 # Temp files
 tmp/
 temp/
+
+# Others
+codereviewpart1.md
+guide.md
+keys.txt
