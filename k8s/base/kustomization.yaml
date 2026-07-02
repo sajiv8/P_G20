@@ -1,0 +1,16 @@
+# ============================================================================
+# Kustomization — Base Layer
+# ============================================================================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: rso
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - gateway-configmap.yaml
+  - redis.yaml
+  - services.yaml
+  - frontend.yaml
+  - gateway.yaml
