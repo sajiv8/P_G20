@@ -12,15 +12,15 @@ resources:
   - ../../base
 
 images:
-  - name: ghcr.io/isuru709/rso-frontend
+  - name: ghcr.io/sajiv8/rso-frontend
     newTag: latest
-  - name: ghcr.io/isuru709/rso-tenant-service
+  - name: ghcr.io/sajiv8/rso-tenant-service
     newTag: latest
-  - name: ghcr.io/isuru709/rso-user-service
+  - name: ghcr.io/sajiv8/rso-user-service
     newTag: latest
-  - name: ghcr.io/isuru709/rso-resource-service
+  - name: ghcr.io/sajiv8/rso-resource-service
     newTag: latest
-  - name: ghcr.io/isuru709/rso-booking-service
+  - name: ghcr.io/sajiv8/rso-booking-service
     newTag: latest
-  - name: ghcr.io/isuru709/rso-notification-service
+  - name: ghcr.io/sajiv8/rso-notification-service
     newTag: latest

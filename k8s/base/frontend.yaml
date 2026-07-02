@@ -22,7 +22,7 @@ spec:
         - name: ghcr-secret
       containers:
         - name: frontend
-          image: ghcr.io/isuru709/rso-frontend:latest
+          image: ghcr.io/sajiv8/rso-frontend:latest
           ports:
             - containerPort: 80
           resources:

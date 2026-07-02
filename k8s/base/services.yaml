@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: tenant-service
-          image: ghcr.io/isuru709/rso-tenant-service:latest
+          image: ghcr.io/sajiv8/rso-tenant-service:latest
           ports:
             - containerPort: 3001
           envFrom:
@@ -105,7 +105,7 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: ghcr.io/isuru709/rso-user-service:latest
+          image: ghcr.io/sajiv8/rso-user-service:latest
           ports:
             - containerPort: 3002
           envFrom:
@@ -188,7 +188,7 @@ spec:
     spec:
       containers:
         - name: resource-service
-          image: ghcr.io/isuru709/rso-resource-service:latest
+          image: ghcr.io/sajiv8/rso-resource-service:latest
           ports:
             - containerPort: 3003
           envFrom:
@@ -266,7 +266,7 @@ spec:
     spec:
       containers:
         - name: booking-service
-          image: ghcr.io/isuru709/rso-booking-service:latest
+          image: ghcr.io/sajiv8/rso-booking-service:latest
           ports:
             - containerPort: 3004
           envFrom:
@@ -344,7 +344,7 @@ spec:
     spec:
       containers:
         - name: notification-service
-          image: ghcr.io/isuru709/rso-notification-service:latest
+          image: ghcr.io/sajiv8/rso-notification-service:latest
           ports:
             - containerPort: 3005
           envFrom:

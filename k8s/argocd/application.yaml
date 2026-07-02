@@ -13,7 +13,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/isuru709/RSO.git
+    repoURL: https://github.com/sajiv8/P_G20.git
     targetRevision: main
     path: k8s/overlays/production
 
