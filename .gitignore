@@ -3,41 +3,49 @@ node_modules/
 
 # Build output
 dist/
-build/
+*.js.map
 
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# Environment variables
+# Environment & Secrets
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*.local
 
-# Editor files
-.vscode/
-.idea/
-*.swp
-*.swo
+# Firebase service account keys
+*-firebase-adminsdk-*.json
+config/firebase-service-account.json
+
+# Scripts with hardcoded secrets (blocked by GitHub push protection)
+backend/scripts/verify-rls.ts
+
+# SSL Certificates (Origin Cert)
+infra/gateway/ssl/*.pem
+nginx/ssl/
+
+# Sensitive reference files
+supa base.txt
+firebase sdk.txt
+resend.txt
+cloudflare.ini
 
 # OS files
 .DS_Store
 Thumbs.db
 
-# Cache
-.cache/
-.eslintcache
-.vite/
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
-# Coverage
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test coverage
 coverage/
+.nyc_output/
 
-# Temporary files
-*.tmp
-*.temp
+# Temp files
+tmp/
+temp/

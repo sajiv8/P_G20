@@ -1,33 +1,18 @@
-# ╔══════════════════════════════════════════════════════════════╗
-# ║  Stage 1: BUILD                                             ║
-# ║  React app එක build කරමු (static HTML/CSS/JS output)       ║
-# ╚══════════════════════════════════════════════════════════════╝
+# ============================================================================
+# Frontend Dockerfile (Production — serves via Nginx)
+# ============================================================================
+
 FROM node:22-alpine AS builder
-
 WORKDIR /app
+COPY package.json ./
+COPY frontend/package.json ./frontend/
+RUN npm install --ignore-scripts -w frontend
+COPY frontend/ ./frontend/
+RUN npm run build -w frontend
 
-COPY package.json package-lock.json* ./
-RUN npm ci
-
-COPY . .
-
-# Vite build → /app/dist folder එකට static files output වෙනවා
-RUN npm run build
-
-
-# ╔══════════════════════════════════════════════════════════════╗
-# ║  Stage 2: SERVE                                              ║
-# ║  Nginx server එකෙන් static files serve කරමු               ║
-# ╚══════════════════════════════════════════════════════════════╝
-FROM nginx:1.27-alpine AS production
-
-# Custom nginx config copy කරමු
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Build stage එකෙන් static files copy කරමු nginx serve directory එකට
-COPY --from=builder /app/dist /usr/share/nginx/html
-
+FROM nginx:1.27-alpine AS runner
+COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
-
-# Nginx foreground එකේ run කරමු (container එක live තියාගන්න)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:80/ || exit 1
 CMD ["nginx", "-g", "daemon off;"]
