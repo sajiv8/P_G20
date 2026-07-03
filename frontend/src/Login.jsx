@@ -71,7 +71,7 @@ export default function Login() {
 
                 <div style={styles.Signup}>
             Don't have an account? 
-            <a href="#">Sign up</a>
+            <a href="/Signup">Sign up</a>
         </div>
 
       </form>
