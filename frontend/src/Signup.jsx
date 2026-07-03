@@ -43,7 +43,24 @@ export default function Signup() {
             style={styles.input}
             />
             </div>
+
         </div>
+
+        <div style={styles.field}> 
+            <label style={styles.label}>Email</label>
+            <div style={styles.inputContainer}>
+            <MdEmail style={styles.user} />
+            <input
+            type="email"
+            placeholder="University Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={styles.input}
+            />
+            </div>
+
+        </div>
+
         <div style={styles.field}> 
             <label style={styles.label}>Password</label>
             <div style={styles.inputContainer}>
