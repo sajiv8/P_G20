@@ -1,5 +1,5 @@
 /**
- * App — Root Component (Stub for CI/CD)
+ * App — Root Component ( Stub for CI/CD )
  * 
  * Minimal component to pass the build pipeline.
  * Full routing and pages will be added in Phase 2.
