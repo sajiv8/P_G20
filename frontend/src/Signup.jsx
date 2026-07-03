@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { MdEmail, MdLock ,MdVisibility} from "react-icons/md";
+import { MdAddBox, MdCode, MdEmail, MdInsertDriveFile, MdLock ,MdPhone,MdVisibility} from "react-icons/md";
 import { FaGraduationCap, FaUser } from "react-icons/fa";
 
 
-export default function Login() {
+export default function Signup() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [facultyCode, setFacultyCode] = useState("");
+   const [memberId, setMemberId] = useState("");
+   const [mobileNumber, setMobileNumber] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -22,25 +27,23 @@ export default function Login() {
         </div>
 
         <div style={styles.welcome}>
-          <h1>Welcome Back</h1>
-          Sign in to your account
+          <h1>Create Account</h1>
+          Join your faculty on CampusRSO
         </div>
-
-
+        
         <div style={styles.field}> 
-            <label style={styles.label}>Username or Email</label>
+            <label style={styles.label}>Full Name</label>
             <div style={styles.inputContainer}>
             <FaUser style={styles.user} />
             <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             style={styles.input}
             />
             </div>
         </div>
-
         <div style={styles.field}> 
             <label style={styles.label}>Password</label>
             <div style={styles.inputContainer}>
@@ -55,23 +58,77 @@ export default function Login() {
             <MdVisibility style={styles.eye} />
             </div>
         </div>
-        
+
+        <div style={styles.field}> 
+            <label style={styles.label}>Confirm Password</label>
+            <div style={styles.inputContainer}>
+            <MdLock style={styles.user} />
+            <input
+            type="password"
+            placeholder="Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            style={styles.input}
+            />
+            <MdVisibility style={styles.eye} />
+            </div>
+        </div>
+
+        <div style={styles.field}> 
+            <label style={styles.label}>Faculty Code</label>
+            <div style={styles.inputContainer}>
+            <MdCode style={styles.user} />
+            <input
+            type="text"
+            placeholder="Faculty Code"
+            value={facultyCode}
+            onChange={(e) => setFacultyCode(e.target.value)}
+            style={styles.input}
+            />
+            </div>
+        </div>
 
 
-        <div style={styles.forgetPassword}>
-            <a href="#">Forget Password?</a>
+ 
+
+        <div style={styles.field}> 
+            <label style={styles.label}>Member ID</label>
+            <div style={styles.inputContainer}>
+            <MdInsertDriveFile style={styles.user} />
+            <input
+            type="text"
+            placeholder="Member ID"
+            value={memberId}
+            onChange={(e) => setMemberId(e.target.value)}
+            style={styles.input}
+            />
+            </div>
+        </div>
+
+        <div style={styles.field}> 
+            <label style={styles.label}>Mobile Number(Optional)</label>
+            <div style={styles.inputContainer}>
+            <MdPhone style={styles.user} />
+            <input
+            type="number"
+            placeholder="#+94771234567"
+            value={mobileNumber}
+            onChange={(e) => setMobileNumber(e.target.value)}
+            style={styles.input}
+            />
+            </div>
         </div>
 
 
 
         
         <button type="submit" style={styles.button}>
-          Login
+          Create Account
         </button>
 
-                <div style={styles.Signup}>
-            Don't have an account? 
-            <a href="#">Sign up</a>
+        <div style={styles.Signup}>
+            Already have an account? 
+            <a href="/Login">Signin</a>
         </div>
 
       </form>
