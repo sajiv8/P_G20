@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { MdEmail, MdLock } from "react-icons/md";
-import { FaGraduationCap } from "react-icons/fa";
+import { MdEmail, MdLock ,MdVisibility} from "react-icons/md";
+import { FaGraduationCap, FaUser } from "react-icons/fa";
 
 
 export default function Login() {
@@ -29,6 +29,8 @@ export default function Login() {
 
         <div style={styles.field}> 
             <label style={styles.label}>Username or Email</label>
+            <div style={styles.inputContainer}>
+            <FaUser style={styles.user} />
             <input
             type="email"
             placeholder="Email"
@@ -36,20 +38,25 @@ export default function Login() {
             onChange={(e) => setEmail(e.target.value)}
             style={styles.input}
             />
+            </div>
         </div>
-        
-        <div style={styles.field}>
+
+        <div style={styles.field}> 
             <label style={styles.label}>Password</label>
+            <div style={styles.inputContainer}>
+            <MdLock style={styles.user} />
             <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             style={styles.input}
-              />
-
-
+            />
+            <MdVisibility style={styles.eye} />
+            
+            </div>
         </div>
+        
 
 
         <div style={styles.forgetPassword}>
@@ -79,22 +86,57 @@ const styles = {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    background: "#f4f4f4",
+    background:
+      "radial-gradient(circle at center, rgba(34, 46, 112, 0.65) 0%, rgba(16, 24, 70, 0.92) 34%, rgba(8, 12, 42, 1) 72%, rgba(5, 8, 27, 1) 100%)",
   },
+
+  inputContainer: {
+    display: "flex",
+    position: "relative",
+    alignItems: "center",
+    width: "100%",
+  },
+
+    user: {
+    padding: "10px",
+    paddingLeft: "15px",
+    display: "flex",
+    position: "absolute",
+  },
+
+  eye: {
+    fontSize: "20px",
+    padding: "10px",
+    paddingRight: "15px",
+    display: "flex",
+    position: "absolute",
+    right: "0",
+  },
+
   form: {
     display: "flex",
     flexDirection: "column",
     gap: "10px",
     padding: "30px",
-    background: "white",
-    borderRadius: "10px",
-    boxShadow: "0 0 10px rgba(0,0,0,0.1)",
-    width: "300px",
+    background: "rgba(16, 21, 66, 0.94)",
+    borderRadius: "20px",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+    border: "1px solid rgba(255, 255, 255, 0.1)",
+    width: "400px",
+    height: "auto",
   },
   input: {
+    background: "rgba(255, 255, 255, 0.1)",
+    border: "none",
+    boxShadow: "0 5px 15px rgba(0,0,0,0.3)",
+    height: "30px",
+    width: "100%",
     padding: "10px",
+    paddingLeft: "35px",
     fontSize: "16px",
-    borderRadius: "10px"
+    margin: "5px",
+    borderRadius: "13px",
+  
   },
   field: {
     display: "flex",
@@ -102,11 +144,13 @@ const styles = {
     gap: "5px",
   },
   welcome:{
+    color: "white",
     textAlign: "center",
     marginBottom: "30px",
   },
 
   cap: {
+    marginTop: "5px",
     fontSize: "60px",
     alignSelf: "center",
     textAlign: "center",
@@ -114,6 +158,7 @@ const styles = {
   },
 
   label: {
+    color: "white",
     fontSize: "14px",
     fontWeight: "bold",
   },
@@ -125,6 +170,7 @@ const styles = {
   },
 
   Signup: {
+    color: "white",
     fontSize: "14px",
     fontWeight: "bold",
     alignSelf: "center",
@@ -136,13 +182,16 @@ const styles = {
     alignSelf: "center",
     borderRadius: "20%",
     textAlign: "center",
-    background: "linear-gradient(to right, #6a66f0, #2e2279)",
+    background: "linear-gradient(135deg, rgb(59, 130, 246), rgb(139, 92, 246))",
   },
 
   button: {
+    height: "60px",
+    fontSize: "18px",
+    fontWeight: "bold",
     borderRadius: "10px",
     padding: "10px",
-    background: "linear-gradient(to right, #6a66f0, #2e2279)",
+    background: "linear-gradient(135deg, rgb(59, 130, 246), rgb(139, 92, 246))",
     color: "white",
     border: "none",
     cursor: "pointer",
