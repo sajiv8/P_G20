@@ -3,7 +3,13 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { LoginPage } from './pages/auth/LoginPage';
 import { SignupPage } from './pages/auth/SignupPage';
+import { ToastContainer } from './components/ToastContainer';
 
+import './styles/variables.css';
+import './styles/reset.css';
+import './styles/animations.css';
+import './styles/components.css';
+import './styles/layout.css';
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
 
@@ -56,6 +62,7 @@ export default function App() {
         <AuthProvider>
           <AppRoutes />
         </AuthProvider>
+        <ToastContainer />
       </ToastProvider>
     </BrowserRouter>
   );
