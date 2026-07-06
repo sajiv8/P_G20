@@ -5,7 +5,7 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-COPY package.json ./
+COPY package.json package-lock.json* ./
 COPY backend/services/shared/package.json ./backend/services/shared/
 COPY backend/services/user-service/package.json ./backend/services/user-service/
 
@@ -24,7 +24,7 @@ FROM node:22-alpine AS runner
 RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup
 WORKDIR /app
 
-COPY package.json ./
+COPY package.json package-lock.json* ./
 COPY backend/services/shared/package.json ./backend/services/shared/
 COPY backend/services/user-service/package.json ./backend/services/user-service/
 
