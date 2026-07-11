@@ -1,6 +1,6 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json* ./
 COPY backend/services/shared/package.json ./backend/services/shared/
 COPY backend/services/resource-service/package.json ./backend/services/resource-service/
 RUN npm install --ignore-scripts
@@ -14,7 +14,7 @@ RUN npm run build -w backend/services/resource-service
 FROM node:22-alpine AS runner
 RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup
 WORKDIR /app
-COPY package.json ./
+COPY package.json package-lock.json* ./
 COPY backend/services/shared/package.json ./backend/services/shared/
 COPY backend/services/resource-service/package.json ./backend/services/resource-service/
 RUN npm install --omit=dev --ignore-scripts
