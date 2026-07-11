@@ -14,29 +14,29 @@ resources:
 images:
   - name: ghcr.io/sajiv8/rso-frontend
 <<<<<<< Updated upstream
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
   - name: ghcr.io/sajiv8/rso-tenant-service
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
   - name: ghcr.io/sajiv8/rso-user-service
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
   - name: ghcr.io/sajiv8/rso-resource-service
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
   - name: ghcr.io/sajiv8/rso-booking-service
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
   - name: ghcr.io/sajiv8/rso-notification-service
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
 
 =======
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
   - name: ghcr.io/sajiv8/rso-tenant-service
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
   - name: ghcr.io/sajiv8/rso-user-service
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
   - name: ghcr.io/sajiv8/rso-resource-service
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
   - name: ghcr.io/sajiv8/rso-booking-service
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
   - name: ghcr.io/sajiv8/rso-notification-service
-    newTag: 47035a3ed7a9f5a28b47cac1a15523bc1b39806f
+    newTag: 93bcf30e3951e56bb9b2d09b3f22b73cbbde3e75
     
 >>>>>>> Stashed changes
