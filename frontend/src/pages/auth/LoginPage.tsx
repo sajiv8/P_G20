@@ -24,7 +24,7 @@ export function LoginPage() {
       navigate('/');
     } catch (err: any) {
       const msg = err.code === 'auth/invalid-credential' ? 'Invalid email or password'
-        : err.code === 'auth/user-not-found' ? 'No account found with this emai'
+        : err.code === 'auth/user-not-found' ? 'No account found with this email'
           : 'Login failed. Please try again.';
       toast('error', msg);
     } finally {
