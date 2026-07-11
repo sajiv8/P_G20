@@ -1,5 +1,5 @@
 # ============================================================================
-# ConfigMap — Non-secret configuration
+# ConfigMap — Non-secret configuration.
 # ============================================================================
 apiVersion: v1
 kind: ConfigMap
