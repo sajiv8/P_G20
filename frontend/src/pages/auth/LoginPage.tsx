@@ -39,7 +39,7 @@ export function LoginPage() {
           <div className="auth-logo-icon">
             <GraduationCap size={28} />
           </div>
-          <h1 className="auth-title">Welcome isuru</h1>
+          <h1 className="auth-title">Welcome back</h1>
           <p className="auth-subtitle">Sign in to your campus account</p>
         </div>
 
