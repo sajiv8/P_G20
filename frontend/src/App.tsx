@@ -91,31 +91,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function ToastViewport() {
-  const { toasts, dismiss } = useToast();
-
-  if (!toasts.length) return null;
-
-  return (
-    <div className="toast-viewport" aria-live="polite" aria-atomic="true">
-      {toasts.map((toast) => (
-        <div key={toast.id} className={`toast toast-${toast.type}`}>
-          <div className="toast-dot" />
-          <p>{toast.message}</p>
-          <button
-            type="button"
-            className="toast-close"
-            onClick={() => dismiss(toast.id)}
-            aria-label="Dismiss notification"
-          >
-            ×
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function AppRoutes() {
   return (
     <Routes>
@@ -156,7 +131,6 @@ export default function App() {
     <BrowserRouter>
       <ToastProvider>
         <AuthProvider>
-          <ToastViewport />
           <AppRoutes />
         </AuthProvider>
         <ToastContainer />
