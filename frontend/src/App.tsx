@@ -4,6 +4,16 @@ import { ToastProvider, useToast } from "./contexts/ToastContext";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { SignupPage } from "./pages/auth/SignupPage";
 import { ForgetpasswordPage } from "./pages/auth/ForgetpasswordPage";
+import { AppShell } from "./layouts/AppShell";
+import { DashboardPage } from "./pages/dashboard/DashboardPage";
+import { ResourcesPage } from "./pages/resources/ResourcesPage";
+import { STResourcesPage } from "./pages/st-resources/STResourcesPage";
+import { STBorrowsPage } from "./pages/st-borrows/STBorrowsPage";
+import { BookingsPage } from "./pages/bookings/BookingsPage";
+import { NotificationsPage } from "./pages/notifications/NotificationsPage";
+import { UsersPage } from "./pages/users/UsersPage";
+import { TenantsPage } from "./pages/tenants/TenantsPage";
+import { ProfilePage } from "./pages/profile/ProfilePage";
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -90,26 +100,23 @@ function AppRoutes() {
 
       {/* Protected routes */}
       <Route
-        path="/"
         element={
           <ProtectedRoute>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                minHeight: "100vh",
-                fontFamily: "system-ui",
-              }}
-            >
-              <div style={{ textAlign: "center" }}>
-                <h1>🏫 Campus RSO Platform</h1>
-                <p>You are logged in!</p>
-              </div>
-            </div>
+            <AppShell />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<DashboardPage />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="resources" element={<ResourcesPage />} />
+        <Route path="st-resources" element={<STResourcesPage />} />
+        <Route path="st-borrows" element={<STBorrowsPage />} />
+        <Route path="bookings" element={<BookingsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="tenants" element={<TenantsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
+      </Route>
 
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
