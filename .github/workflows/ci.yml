@@ -52,7 +52,7 @@ jobs:
 
       - name: Build & Push Frontend image
         if: github.event_name == 'push'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: frontend/Dockerfile
@@ -92,7 +92,7 @@ jobs:
 
       - name: Build & Push ${{ matrix.service }}
         if: github.event_name == 'push'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: backend/services/${{ matrix.service }}/Dockerfile
