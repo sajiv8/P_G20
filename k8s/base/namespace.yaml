@@ -7,3 +7,4 @@ metadata:
   name: rso
   labels:
     app.kubernetes.io/part-of: campus-rso
+

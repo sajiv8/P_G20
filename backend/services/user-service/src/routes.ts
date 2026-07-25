@@ -11,6 +11,7 @@ import {
   requireRole,
   getSupabaseClient,
   getRedisClient,
+  publishEvent,
   ApiError,
   sendSuccess,
   sendPaginated,
@@ -45,6 +46,150 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     }
     
     sendSuccess(reply, { valid: true, tenant_name: tenant.name });
+  });
+  // ========================================================================
+  // POST /api/v1/users/forgot-password — Send reset code to verified email
+  // ========================================================================
+  server.post('/api/v1/users/forgot-password', async (request, reply) => {
+    const { email, member_id } = request.body as { email: string; member_id: string };
+
+    if (!email || !email.includes('@')) {
+      throw ApiError.badRequest('A valid email address is required');
+    }
+    if (!member_id || !member_id.trim()) {
+      throw ApiError.badRequest('Member ID is required');
+    }
+
+    // Verify email + member_id combination exists
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('firebase_uid, email, full_name, member_id')
+      .eq('email', email.toLowerCase().trim())
+      .single();
+
+    if (!userProfile) {
+      // Don't reveal whether email exists — generic message
+      throw ApiError.badRequest('No account found with the provided email and ID combination');
+    }
+
+    // Verify member_id matches (case-insensitive)
+    if (!userProfile.member_id || userProfile.member_id.toLowerCase() !== member_id.trim().toLowerCase()) {
+      throw ApiError.badRequest('No account found with the provided email and ID combination');
+    }
+
+    const redis = getRedisClient();
+    const rateLimitKey = `pwd-reset-rate:${email}`;
+    const otpKey = `pwd-reset:${email}`;
+
+    // Rate limit: max 5 attempts per 15 minutes
+    const sendCount = await redis.incr(rateLimitKey);
+    if (sendCount === 1) {
+      await redis.expire(rateLimitKey, 900);
+    }
+    if (sendCount > 5) {
+      throw ApiError.tooManyRequests('Too many reset attempts. Please wait 15 minutes.');
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store in Redis with 10 min TTL
+    await redis.set(otpKey, JSON.stringify({ otp, uid: userProfile.firebase_uid }), 'EX', 600);
+
+    // Send email via Resend
+    const apiKey = process.env.RESEND_API_KEY;
+    const from = process.env.NOTIFICATION_FROM_EMAIL || 'onboarding@resend.dev';
+
+    if (apiKey) {
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            from,
+            to: email,
+            subject: 'CampusRSO — Password Reset Code',
+            html: `
+              <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+                <div style="text-align: center; margin-bottom: 24px;">
+                  <h1 style="color: #6366f1; margin: 0;">CampusRSO</h1>
+                  <p style="color: #6b7280; margin-top: 4px;">Password Reset</p>
+                </div>
+                <div style="background: #f9fafb; border-radius: 12px; padding: 32px; text-align: center;">
+                  <p style="color: #374151; font-size: 16px; margin-bottom: 8px;">Hello ${userProfile.full_name || 'User'},</p>
+                  <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">Your password reset code is:</p>
+                  <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #6366f1; background: white; border-radius: 8px; padding: 16px; border: 2px dashed #c7d2fe;">
+                    ${otp}
+                  </div>
+                  <p style="color: #9ca3af; font-size: 13px; margin-top: 16px;">This code expires in 10 minutes.</p>
+                </div>
+                <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">If you didn't request a password reset, please ignore this email.</p>
+              </div>
+            `,
+          }),
+        });
+        logger.info({ email }, 'Password reset OTP sent');
+      } catch (err) {
+        logger.error({ err, email }, 'Failed to send password reset email');
+        throw ApiError.internal('Failed to send reset email. Please try again.');
+      }
+    } else {
+      logger.warn({ email, otp }, 'RESEND_API_KEY not set — OTP logged for dev');
+    }
+
+    sendSuccess(reply, { message: 'Reset code sent to your email', email });
+  });
+
+  // ========================================================================
+  // POST /api/v1/users/reset-password — Verify code and set new password
+  // ========================================================================
+  server.post('/api/v1/users/reset-password', async (request, reply) => {
+    const { email, code, new_password } = request.body as { email: string; code: string; new_password: string };
+
+    if (!email || !code || !new_password) {
+      throw ApiError.badRequest('Email, verification code, and new password are required');
+    }
+
+    if (new_password.length < 6) {
+      throw ApiError.badRequest('Password must be at least 6 characters long');
+    }
+
+    const redis = getRedisClient();
+    const otpKey = `pwd-reset:${email}`;
+    const storedData = await redis.get(otpKey);
+
+    if (!storedData) {
+      throw ApiError.badRequest('Reset code has expired. Please request a new one.');
+    }
+
+    let parsed: { otp: string; uid: string };
+    try {
+      parsed = JSON.parse(storedData);
+    } catch {
+      throw ApiError.badRequest('Invalid reset session. Please request a new code.');
+    }
+
+    if (parsed.otp !== code.trim()) {
+      throw ApiError.badRequest('Invalid reset code. Please try again.');
+    }
+
+    // Update password in Firebase Auth
+    try {
+      const { getAuth } = await import('firebase-admin/auth');
+      await getAuth().updateUser(parsed.uid, { password: new_password });
+    } catch (err: any) {
+      logger.error({ err, uid: parsed.uid }, 'Failed to reset password in Firebase');
+      throw ApiError.internal('Failed to reset password. Please try again.');
+    }
+
+    // Clean up Redis
+    await redis.del(otpKey);
+
+    logger.info({ email, uid: parsed.uid }, 'Password reset successfully');
+    sendSuccess(reply, { message: 'Password reset successfully. You can now log in with your new password.' });
   });
 
   // ========================================================================
@@ -237,6 +382,19 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     await setUserClaims(user.sub, tenant.id, 'student');
 
     logger.info({ uid: user.sub, tenantId: tenant.id }, 'User signed up');
+
+    // Publish event for notification service
+    try {
+      await publishEvent('system-events', {
+        type: 'user.signup',
+        payload: { uid: user.sub, email: user.email || '', full_name: full_name || '', tenant_name: tenant.name },
+        timestamp: new Date().toISOString(),
+        tenantId: tenant.id,
+      });
+    } catch (err) {
+      logger.warn({ err }, 'Failed to publish user.signup event (non-fatal)');
+    }
+
     sendSuccess(reply, {
       profile,
       claims_set: true,
@@ -534,6 +692,19 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     }
 
     logger.info({ uid, newRole: role, newTenant: data.tenant_id, changedBy: request.user!.sub }, 'User role/tenant changed');
+
+    // Publish event for notification service
+    try {
+      await publishEvent('system-events', {
+        type: 'user.role_changed',
+        payload: { uid, email: data.email, full_name: data.full_name, new_role: role, changed_by: request.user!.sub },
+        timestamp: new Date().toISOString(),
+        tenantId: data.tenant_id || 'system',
+      });
+    } catch (err) {
+      logger.warn({ err }, 'Failed to publish user.role_changed event (non-fatal)');
+    }
+
     sendSuccess(reply, {
       profile: data,
       claims_updated: true,
@@ -589,6 +760,20 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     }
 
     logger.info({ uid, bannedBy: request.user!.sub, reason }, 'User banned');
+
+    // Publish event for notification service
+    try {
+      const { data: bannedProfile } = await supabase.from('user_profiles').select('email, tenant_id').eq('firebase_uid', uid).single();
+      await publishEvent('system-events', {
+        type: 'user.banned',
+        payload: { uid, email: bannedProfile?.email || '', full_name: targetUser.full_name || '', reason: reason || 'Suspended by administrator' },
+        timestamp: new Date().toISOString(),
+        tenantId: bannedProfile?.tenant_id || 'system',
+      });
+    } catch (err) {
+      logger.warn({ err }, 'Failed to publish user.banned event (non-fatal)');
+    }
+
     sendSuccess(reply, { message: `User ${targetUser.full_name || uid} has been suspended` });
   });
 
@@ -622,6 +807,20 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     }
 
     logger.info({ uid, unbannedBy: request.user!.sub }, 'User unbanned');
+
+    // Publish event for notification service
+    try {
+      const { data: unbannedProfile } = await supabase.from('user_profiles').select('email, tenant_id').eq('firebase_uid', uid).single();
+      await publishEvent('system-events', {
+        type: 'user.unbanned',
+        payload: { uid, email: unbannedProfile?.email || '', full_name: data.full_name || '' },
+        timestamp: new Date().toISOString(),
+        tenantId: unbannedProfile?.tenant_id || 'system',
+      });
+    } catch (err) {
+      logger.warn({ err }, 'Failed to publish user.unbanned event (non-fatal)');
+    }
+
     sendSuccess(reply, { message: `User ${data.full_name || uid} has been reactivated` });
   });
 
@@ -694,6 +893,19 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     }
 
     logger.info({ uid, deletedBy: user.sub }, 'User account deleted');
+
+    // Publish event for notification service
+    try {
+      await publishEvent('system-events', {
+        type: 'user.deleted',
+        payload: { uid, email: data.email || '', full_name: data.full_name || '', deleted_by: user.sub },
+        timestamp: new Date().toISOString(),
+        tenantId: data.tenant_id || 'system',
+      });
+    } catch (err) {
+      logger.warn({ err }, 'Failed to publish user.deleted event (non-fatal)');
+    }
+
     sendSuccess(reply, { message: 'User account deleted' });
   });
 
@@ -720,27 +932,48 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
       throw ApiError.badRequest(`File type .${ext} not allowed. Use: ${allowed.join(', ')}`);
     }
 
-    // Decode base64
+    // Decode base64 — handle both raw base64 and data URI formats
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
-    const buffer = Buffer.from(base64Data, 'base64');
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(base64Data, 'base64');
+    } catch {
+      throw ApiError.badRequest('Invalid base64 image data');
+    }
 
-    if (buffer.length > 5 * 1024 * 1024) {
-      throw ApiError.badRequest('File too large. Max 5MB');
+    if (buffer.length === 0) {
+      throw ApiError.badRequest('Image data is empty');
+    }
+
+    if (buffer.length > 2 * 1024 * 1024) {
+      throw ApiError.badRequest('File too large. Max 2MB');
     }
 
     const fileName = `${uid}_${Date.now()}.${ext}`;
     const uploadDir = '/app/uploads/avatars';
-    const { mkdir, writeFile } = await import('fs/promises');
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(`${uploadDir}/${fileName}`, buffer);
+
+    // Write file to disk
+    try {
+      const { mkdir, writeFile } = await import('fs/promises');
+      await mkdir(uploadDir, { recursive: true });
+      await writeFile(`${uploadDir}/${fileName}`, buffer);
+    } catch (fsErr) {
+      logger.error({ err: fsErr, uploadDir, fileName }, 'Failed to write avatar file');
+      throw ApiError.internal('Failed to save avatar file');
+    }
 
     const avatarUrl = `/uploads/avatars/${fileName}`;
 
     // Update user profile
-    await supabase
+    const { error: dbErr } = await supabase
       .from('user_profiles')
       .update({ avatar_url: avatarUrl })
       .eq('firebase_uid', uid);
+
+    if (dbErr) {
+      logger.error({ err: dbErr, uid }, 'Failed to update avatar_url in database');
+      throw ApiError.internal('Failed to update avatar in profile');
+    }
 
     logger.info({ uid, avatarUrl }, 'Avatar uploaded');
     sendSuccess(reply, { avatar_url: avatarUrl });
@@ -805,6 +1038,34 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
   });
 
   // ========================================================================
+  // GET /api/v1/users/:uid/tokens — Admin: get a specific student's tokens
+  // ========================================================================
+  server.get('/api/v1/users/:uid/tokens', {
+    preHandler: [authMiddleware, requireRole('tenant_admin', 'main_admin')],
+  }, async (request, reply) => {
+    const { uid } = request.params as { uid: string };
+
+    const { data: balance } = await supabase
+      .from('student_token_balances')
+      .select('*')
+      .eq('firebase_uid', uid)
+      .single();
+
+    if (!balance) {
+      return sendSuccess(reply, { balance: null, transactions: [] });
+    }
+
+    const { data: transactions } = await supabase
+      .from('token_transactions')
+      .select('*')
+      .eq('firebase_uid', uid)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    sendSuccess(reply, { balance, transactions: transactions || [] });
+  });
+
+  // ========================================================================
   // PUT /api/v1/users/:uid/tokens — Admin: adjust a specific student's tokens
   // ========================================================================
   server.put('/api/v1/users/:uid/tokens', {
@@ -842,3 +1103,4 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     sendSuccess(reply, data);
   });
 }
+

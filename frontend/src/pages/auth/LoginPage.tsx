@@ -25,7 +25,7 @@ export function LoginPage() {
     } catch (err: any) {
       const msg = err.code === 'auth/invalid-credential' ? 'Invalid email or password'
         : err.code === 'auth/user-not-found' ? 'No account found with this email'
-          : 'Login failed. Please try again.';
+        : 'Login failed. Please try again.';
       toast('error', msg);
     } finally {
       setLoading(false);
@@ -39,7 +39,7 @@ export function LoginPage() {
           <div className="auth-logo-icon">
             <GraduationCap size={28} />
           </div>
-          <h1 className="auth-title">Welcome back</h1>
+          <h1 className="auth-title">Welcome Back</h1>
           <p className="auth-subtitle">Sign in to your campus account</p>
         </div>
 
@@ -76,8 +76,8 @@ export function LoginPage() {
                 required
                 style={{ paddingLeft: 40, paddingRight: 40 }}
               />
-              <button
-                type="button"
+              <button 
+                type="button" 
                 onClick={() => setShowPassword(!showPassword)}
                 style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0 }}
               >
@@ -104,3 +104,4 @@ export function LoginPage() {
     </div>
   );
 }
+

@@ -1,5 +1,5 @@
 # ============================================================================
-# ConfigMap — Non-secret configuration.
+# ConfigMap — Non-secret configuration
 # ============================================================================
 apiVersion: v1
 kind: ConfigMap
@@ -11,3 +11,4 @@ data:
   LOG_LEVEL: "info"
   OPTIMIZATION_SCAN_INTERVAL: "86400000"
   FIREBASE_PROJECT_ID: "campus-rso"
+

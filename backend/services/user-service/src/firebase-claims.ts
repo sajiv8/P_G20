@@ -83,3 +83,4 @@ export async function updateUserRole(uid: string, newRole: AppRole): Promise<voi
 export async function clearUserClaims(uid: string): Promise<void> {
   await getAuth().setCustomUserClaims(uid, {});
 }
+

@@ -41,3 +41,4 @@ export function initFirebaseAdmin(): App {
 }
 
 export { firebaseApp };
+

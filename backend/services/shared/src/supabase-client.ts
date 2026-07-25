@@ -48,3 +48,4 @@ export function getSupabaseClient(): SupabaseClient {
 export function resetSupabaseClient(): void {
   client = null;
 }
+

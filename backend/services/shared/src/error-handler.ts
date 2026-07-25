@@ -45,8 +45,8 @@ export class ApiError extends Error {
     return new ApiError(409, 'CONFLICT', message, details);
   }
 
-  static tooManyRequests(message = 'Too many requests', details?: unknown) {
-    return new ApiError(429, 'TOO_MANY_REQUESTS', message, details);
+  static tooManyRequests(message = 'Too many requests') {
+    return new ApiError(429, 'TOO_MANY_REQUESTS', message);
   }
 
   static internal(message = 'Internal server error') {
@@ -170,3 +170,4 @@ export function sendPaginated<T>(
     },
   });
 }
+
