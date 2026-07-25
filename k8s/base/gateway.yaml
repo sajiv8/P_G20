@@ -19,6 +19,10 @@ spec:
     metadata:
       labels:
         app: gateway
+      annotations:
+        # CI pipeline updates this hash when gateway-configmap.yaml changes,
+        # triggering a pod rollout so Nginx picks up the new config.
+        configmap-hash: "ee1dd54dd5a870a94779f46d3293385bafaccfd0a39a8f6b92ff044dad438d4b"
     spec:
       containers:
         - name: gateway
@@ -85,3 +89,4 @@ spec:
     - name: https
       port: 443
       targetPort: 443
+

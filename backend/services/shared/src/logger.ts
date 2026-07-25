@@ -38,3 +38,4 @@ export function createRequestLogger(requestId?: string) {
 }
 
 export type Logger = pino.Logger;
+

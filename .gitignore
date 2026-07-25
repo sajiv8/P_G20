@@ -49,11 +49,10 @@ coverage/
 # Temp files
 tmp/
 temp/
-
-# Others
-codereviewpart1.md
-guide.md
-keys.txt
 firebase-service-account.json
 firebase.txt
+github token 90 days.txt
+keys.txt
 supabase.txt
+argoCD.txt
+**/firebase-service-account.json

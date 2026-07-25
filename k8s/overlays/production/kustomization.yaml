@@ -12,16 +12,17 @@ resources:
   - ../../base
 
 images:
-  - name: ghcr.io/isuru709/rso-frontend
-    newTag: 3065ea89bd98aec500b9418910a370b1b9200eb8
-  - name: ghcr.io/isuru709/rso-tenant-service
-    newTag: 3065ea89bd98aec500b9418910a370b1b9200eb8
-  - name: ghcr.io/isuru709/rso-user-service
-    newTag: 3065ea89bd98aec500b9418910a370b1b9200eb8
-  - name: ghcr.io/isuru709/rso-resource-service
-    newTag: 3065ea89bd98aec500b9418910a370b1b9200eb8
-  - name: ghcr.io/isuru709/rso-booking-service
-    newTag: 3065ea89bd98aec500b9418910a370b1b9200eb8
-  - name: ghcr.io/isuru709/rso-notification-service
-    newTag: 3065ea89bd98aec500b9418910a370b1b9200eb8
+  - name: ghcr.io/sajiv8/rso-frontend
+    newTag: 788c042b4b8043cd12e950768e1b616469e18e3c
+  - name: ghcr.io/sajiv8/rso-tenant-service
+    newTag: 788c042b4b8043cd12e950768e1b616469e18e3c
+  - name: ghcr.io/sajiv8/rso-user-service
+    newTag: 788c042b4b8043cd12e950768e1b616469e18e3c
+  - name: ghcr.io/sajiv8/rso-resource-service
+    newTag: 788c042b4b8043cd12e950768e1b616469e18e3c
+  - name: ghcr.io/sajiv8/rso-booking-service
+    newTag: 788c042b4b8043cd12e950768e1b616469e18e3c
+  - name: ghcr.io/sajiv8/rso-notification-service
+    newTag: 788c042b4b8043cd12e950768e1b616469e18e3c
+
 

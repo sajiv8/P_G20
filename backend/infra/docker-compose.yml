@@ -37,6 +37,8 @@ services:
         condition: service_healthy
       notification-service:
         condition: service_healthy
+      frontend:
+        condition: service_started
     networks:
       - rso-internal
     restart: unless-stopped
@@ -118,6 +120,7 @@ services:
       - REDIS_URL=redis://redis:6379
     volumes:
       - ${FIREBASE_SERVICE_ACCOUNT_PATH:-./config/firebase-service-account.json}:/app/config/firebase-service-account.json:ro
+      - uploads:/app/uploads
     networks:
       - rso-internal
     restart: unless-stopped
@@ -203,8 +206,24 @@ services:
       start_period: 5s
       retries: 3
 
+  # ==========================================================================
+  # Frontend — React SPA served by Nginx
+  # ==========================================================================
+  frontend:
+    build:
+      context: ../..
+      dockerfile: frontend/Dockerfile
+    container_name: rso-frontend
+    networks:
+      - rso-internal
+    restart: unless-stopped
+    expose:
+      - "80"
+
+
 volumes:
   redis-data:
     driver: local
   uploads:
     driver: local
+

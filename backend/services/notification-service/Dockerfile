@@ -24,3 +24,4 @@ USER appuser
 EXPOSE 3005
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3005/health || exit 1
 CMD ["node", "backend/services/notification-service/dist/index.js"]
+
