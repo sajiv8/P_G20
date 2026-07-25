@@ -1,6 +1,6 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
-COPY package.json package-lock.json* ./
+COPY package.json ./
 COPY backend/services/shared/package.json ./backend/services/shared/
 COPY backend/services/resource-service/package.json ./backend/services/resource-service/
 RUN npm install --ignore-scripts
@@ -14,13 +14,18 @@ RUN npm run build -w backend/services/resource-service
 FROM node:22-alpine AS runner
 RUN addgroup -g 1001 -S appgroup && adduser -u 1001 -S appuser -G appgroup
 WORKDIR /app
-COPY package.json package-lock.json* ./
+COPY package.json ./
 COPY backend/services/shared/package.json ./backend/services/shared/
 COPY backend/services/resource-service/package.json ./backend/services/resource-service/
 RUN npm install --omit=dev --ignore-scripts
 COPY --from=builder /app/backend/services/shared/dist ./backend/services/shared/dist
 COPY --from=builder /app/backend/services/resource-service/dist ./backend/services/resource-service/dist
+
+# Pre-create uploads directories with correct ownership
+RUN mkdir -p /app/uploads/resources /app/uploads/st-resources && chown -R appuser:appgroup /app/uploads
+
 USER appuser
 EXPOSE 3003
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3003/health || exit 1
 CMD ["node", "backend/services/resource-service/dist/index.js"]
+

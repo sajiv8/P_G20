@@ -57,3 +57,4 @@ button {
   border-radius: var(--radius-full);
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-text-secondary); }
+

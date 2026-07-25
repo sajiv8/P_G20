@@ -162,3 +162,4 @@ export async function closeRedis(): Promise<void> {
     logger.info('Redis connection closed');
   }
 }
+

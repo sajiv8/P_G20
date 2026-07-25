@@ -12,6 +12,7 @@ export interface UserClaims {
   email?: string;
   tenantId: string | null;
   appRole: AppRole;
+  isBanned?: boolean;
 }
 
 // ============================================================================
@@ -74,12 +75,21 @@ export type BookingEventType =
   | 'booking.approved'
   | 'booking.rejected'
   | 'booking.cancelled'
+  | 'booking.updated'
   | 'booking.conflict_detected';
 
 export type ResourceEventType =
   | 'resource.underutilized'
   | 'resource.created'
-  | 'resource.updated';
+  | 'resource.updated'
+  | 'resource.deleted';
+
+export type UserEventType =
+  | 'user.signup'
+  | 'user.banned'
+  | 'user.unbanned'
+  | 'user.deleted'
+  | 'user.role_changed';
 
 export type OptimizationEventType =
   | 'optimization.scan';
@@ -92,3 +102,4 @@ declare module 'fastify' {
     user?: UserClaims;
   }
 }
+
