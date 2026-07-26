@@ -11,6 +11,7 @@ import {
 import type { User, IdTokenResult } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { api } from '../lib/api';
+import { resolveAvatarUrl } from '../lib/avatar';
 
 interface Claims {
   role?: string;
@@ -23,6 +24,8 @@ interface AuthContextType {
   user: User | null;
   claims: Claims;
   loading: boolean;
+  avatarUrl: string | null;
+  setAvatarUrl: (url: string | null) => void;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, tenantCode: string, fullName: string, memberId?: string, phone?: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
@@ -36,6 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [claims, setClaims] = useState<Claims>({});
   const [loading, setLoading] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     // Safety timeout — if Firebase doesn't respond in 5s, stop loading
@@ -58,9 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch {
           setClaims({});
         }
+        api.get<{ avatar_url?: string }>(`/users/${firebaseUser.uid}`).then(res => {
+          if (res.success && res.data) {
+            setAvatarUrl(resolveAvatarUrl(res.data.avatar_url));
+          }
+        }).catch(() => {});
       } else {
         setUser(null);
         setClaims({});
+        setAvatarUrl(null);
       }
       setLoading(false);
     });
@@ -114,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, claims, loading, login, signup, loginWithGoogle, logout, resetPassword }}>
+    <AuthContext.Provider value={{ user, claims, loading, avatarUrl, setAvatarUrl, login, signup, loginWithGoogle, logout, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );
