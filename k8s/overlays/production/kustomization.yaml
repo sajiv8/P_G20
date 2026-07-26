@@ -13,16 +13,16 @@ resources:
 
 images:
   - name: ghcr.io/sajiv8/rso-frontend
-    newTag: c66ab368af2f01bf4075542ac80f22e36c6d9f0c
+    newTag: e429820a90ac5801f2a23727cf1b2c01043fcd60
   - name: ghcr.io/sajiv8/rso-tenant-service
-    newTag: c66ab368af2f01bf4075542ac80f22e36c6d9f0c
+    newTag: e429820a90ac5801f2a23727cf1b2c01043fcd60
   - name: ghcr.io/sajiv8/rso-user-service
-    newTag: c66ab368af2f01bf4075542ac80f22e36c6d9f0c
+    newTag: e429820a90ac5801f2a23727cf1b2c01043fcd60
   - name: ghcr.io/sajiv8/rso-resource-service
-    newTag: c66ab368af2f01bf4075542ac80f22e36c6d9f0c
+    newTag: e429820a90ac5801f2a23727cf1b2c01043fcd60
   - name: ghcr.io/sajiv8/rso-booking-service
-    newTag: c66ab368af2f01bf4075542ac80f22e36c6d9f0c
+    newTag: e429820a90ac5801f2a23727cf1b2c01043fcd60
   - name: ghcr.io/sajiv8/rso-notification-service
-    newTag: c66ab368af2f01bf4075542ac80f22e36c6d9f0c
+    newTag: e429820a90ac5801f2a23727cf1b2c01043fcd60
 
 
