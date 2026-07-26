@@ -7,7 +7,7 @@ import { api } from '../lib/api';
 
 export function TopBar() {
   const navigate = useNavigate();
-  const { user, claims, logout } = useAuth();
+  const { user, claims, logout, avatarUrl } = useAuth();
   const { toast } = useToast();
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [unread, setUnread] = useState(0);
@@ -116,7 +116,11 @@ export function TopBar() {
             onClick={() => setMenuOpen(!menuOpen)}
             style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', borderRadius: 'var(--radius-md)' }}
           >
-            <div className="avatar avatar-sm">{initials}</div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className="avatar avatar-sm" style={{ objectFit: 'cover' }} />
+            ) : (
+              <div className="avatar avatar-sm">{initials}</div>
+            )}
             <ChevronDown size={14} style={{ transition: 'transform 200ms', transform: menuOpen ? 'rotate(180deg)' : 'none' }} />
           </button>
 
