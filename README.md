@@ -274,4 +274,4 @@ npx tsx scripts/verify-rls.ts
 
 ## License
 
-Private — University of Kelaniya
+Private — University of Moratuwa
