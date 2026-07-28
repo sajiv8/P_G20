@@ -58,3 +58,6 @@ argoCD.txt
 **/firebase-service-account.json
 n8n_integration_guide.md
 n8n-deploy-chatbot.mjs
+CI-CDGuide.md
+productionCICD.md
+DeploymentGuide.md
