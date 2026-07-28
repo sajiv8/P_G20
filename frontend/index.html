@@ -59,25 +59,6 @@
   </div>
   <script type="module" src="/src/main.tsx"></script>
   <link href="https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css" rel="stylesheet" />
-  <script type="module">
-    import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
-
-    createChat({
-      webhookUrl: '/api/v1/ai-chat/chat',
-      chatInputKey: 'chatInput',
-      chatSessionKey: 'sessionId',
-      poweredBy: false,   // <-- n8n logo ඉවත් වෙනවා
-      i18n: {
-        en: {
-          title: '🏫 Campus AI Assistant',
-          subtitle: 'Ask me about resources, availability & bookings',
-          inputPlaceholder: 'e.g. "What labs are available tomorrow?"',
-          getStarted: 'New Conversation',
-          footer: '',
-        },
-      },
-    });
-  </script>
 </body>
 
 </html>
