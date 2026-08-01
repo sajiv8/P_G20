@@ -42,11 +42,13 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
 
     // Tenant scoping
     if (request.user!.appRole !== 'main_admin') {
-      const tenantId = request.user!.tenantId;
-      if (!tenantId || tenantId === 'null' || tenantId === 'undefined') {
-        throw ApiError.forbidden('Your account has no tenant assigned. Please contact an admin.');
+      if (my_bookings !== 'true') {
+        const tenantId = request.user!.tenantId;
+        if (!tenantId || tenantId === 'null' || tenantId === 'undefined') {
+          throw ApiError.forbidden('Your account has no tenant assigned. Please contact an admin.');
+        }
+        query = query.eq('tenant_id', tenantId);
       }
-      query = query.eq('tenant_id', tenantId);
     }
 
     if (resource_id) query = query.eq('resource_id', resource_id);
