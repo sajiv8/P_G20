@@ -310,7 +310,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
     preHandler: [authMiddleware, requireRole('tenant_admin', 'main_admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
-    const { reason } = request.body as { reason?: string };
+    const { reason } = (request.body || {}) as { reason?: string };
 
     const { data, error } = await supabase
       .from('bookings')
