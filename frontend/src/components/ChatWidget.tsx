@@ -10,7 +10,7 @@ export function ChatWidget() {
     // Add custom CSS to hide the "Powered by n8n" branding
     const style = document.createElement('style');
     style.innerHTML = `
-      .chat-footer, .n8n-chat-footer, [class*="powered-by"] {
+      .chat-footer > a, .n8n-chat-footer > a, a[href*="n8n.io"] {
         display: none !important;
       }
     `;
