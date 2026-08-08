@@ -7,8 +7,9 @@ export function ChatWidget() {
     link.href = 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css';
     document.head.appendChild(link);
 
+    // @ts-ignore - TypeScript doesn't know about CDN imports
     import('https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js')
-      .then(module => {
+      .then((module: any) => {
         module.createChat({
           webhookUrl: 'https://nn.isuruhub.site:8443/webhook/rso-campus-chatbot/chat',
           mode: 'window',
