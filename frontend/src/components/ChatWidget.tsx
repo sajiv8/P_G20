@@ -7,6 +7,15 @@ export function ChatWidget() {
     link.href = 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css';
     document.head.appendChild(link);
 
+    // Add custom CSS to hide the "Powered by n8n" branding
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .chat-footer, .n8n-chat-footer, [class*="powered-by"] {
+        display: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+
     // @ts-ignore - TypeScript doesn't know about CDN imports
     import('https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js')
       .then((module: any) => {
@@ -15,6 +24,7 @@ export function ChatWidget() {
           mode: 'window',
           chatInputKey: 'chatInput',
           showWelcomeScreen: true,
+          showPoweredBy: false, // Disables branding if supported by the widget version
           initialMessages: [
             'ආයුබෝවන්! 👋 මම RSO Campus Assistant.',
             'Halls, labs, bookings, users ගැන අහන්න!'
@@ -39,9 +49,8 @@ export function ChatWidget() {
       });
 
     return () => { 
-      if (document.head.contains(link)) {
-        document.head.removeChild(link); 
-      }
+      if (document.head.contains(link)) document.head.removeChild(link); 
+      if (document.head.contains(style)) document.head.removeChild(style);
     };
   }, []);
 
