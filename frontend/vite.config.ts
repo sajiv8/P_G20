@@ -16,6 +16,11 @@ export default defineConfig({
         target: 'http://localhost:80',
         changeOrigin: true,
       },
+      '/webhook': {
+        target: 'https://nn.isuruhub.site:8443',
+        changeOrigin: true,
+        secure: false
+      },
     },
   },
 });

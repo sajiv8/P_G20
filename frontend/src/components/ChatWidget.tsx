@@ -20,7 +20,7 @@ export function ChatWidget() {
     import('https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js')
       .then((module: any) => {
         module.createChat({
-          webhookUrl: 'https://nn.isuruhub.site:8443/webhook/rso-campus-chatbot/chat',
+          webhookUrl: window.location.origin + '/webhook/rso-campus-chatbot/chat',
           mode: 'window',
           chatInputKey: 'chatInput',
           showWelcomeScreen: true,
