@@ -1,0 +1,206 @@
+# ============================================================================
+# Local Development — Docker Compose (No Nginx, No SSL, No CI/CD)
+# ============================================================================
+# Usage:
+#   docker compose -f docker-compose.local.yml up --build -d
+#   docker compose -f docker-compose.local.yml logs -f
+#   docker compose -f docker-compose.local.yml down
+# ============================================================================
+
+networks:
+  rso-local:
+    driver: bridge
+
+services:
+  # ==========================================================================
+  # Redis — Caching, rate limiting, Redis Streams message broker
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: rso-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - rso-local
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+  # ==========================================================================
+  # Tenant Service — Faculty onboarding and tenant CRUD
+  # ==========================================================================
+  tenant-service:
+    build:
+      context: .
+      dockerfile: backend/services/tenant-service/Dockerfile
+    container_name: rso-tenant-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - TENANT_SERVICE_PORT=3001
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/firebase-service-account.json
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./backend/config/firebase-service-account.json:/app/config/firebase-service-account.json:ro
+    networks:
+      - rso-local
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ==========================================================================
+  # User Profile Service — Signup, profile CRUD, role management
+  # ==========================================================================
+  user-service:
+    build:
+      context: .
+      dockerfile: backend/services/user-service/Dockerfile
+    container_name: rso-user-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - USER_SERVICE_PORT=3002
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/firebase-service-account.json
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./backend/config/firebase-service-account.json:/app/config/firebase-service-account.json:ro
+      - uploads:/app/uploads
+    networks:
+      - rso-local
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ==========================================================================
+  # Resource Catalog Service — CRUD + search for halls, labs, equipment
+  # ==========================================================================
+  resource-service:
+    build:
+      context: .
+      dockerfile: backend/services/resource-service/Dockerfile
+    container_name: rso-resource-service
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - RESOURCE_SERVICE_PORT=3003
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/firebase-service-account.json
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./backend/config/firebase-service-account.json:/app/config/firebase-service-account.json:ro
+      - uploads:/app/uploads
+    networks:
+      - rso-local
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ==========================================================================
+  # Booking & Optimization Engine — Reservations, conflict detection
+  # ==========================================================================
+  booking-service:
+    build:
+      context: .
+      dockerfile: backend/services/booking-service/Dockerfile
+    container_name: rso-booking-service
+    ports:
+      - "3004:3004"
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - BOOKING_SERVICE_PORT=3004
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/firebase-service-account.json
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - REDIS_URL=redis://redis:6379
+      - OPTIMIZATION_SCAN_INTERVAL=86400000
+    volumes:
+      - ./backend/config/firebase-service-account.json:/app/config/firebase-service-account.json:ro
+    networks:
+      - rso-local
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ==========================================================================
+  # Notification Service — Event consumer, email dispatch, in-app inbox
+  # ==========================================================================
+  notification-service:
+    build:
+      context: .
+      dockerfile: backend/services/notification-service/Dockerfile
+    container_name: rso-notification-service
+    ports:
+      - "3005:3005"
+    environment:
+      - NODE_ENV=development
+      - LOG_LEVEL=info
+      - NOTIFICATION_SERVICE_PORT=3005
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/config/firebase-service-account.json
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - REDIS_URL=redis://redis:6379
+      - EMAIL_PROVIDER=${EMAIL_PROVIDER:-resend}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - NOTIFICATION_FROM_EMAIL=${NOTIFICATION_FROM_EMAIL:-onboarding@resend.dev}
+    volumes:
+      - ./backend/config/firebase-service-account.json:/app/config/firebase-service-account.json:ro
+    networks:
+      - rso-local
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ==========================================================================
+  # Frontend — React SPA served by Nginx (port 5173)
+  # ==========================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: rso-frontend
+    ports:
+      - "5173:80"
+    networks:
+      - rso-local
+    restart: unless-stopped
+    depends_on:
+      - tenant-service
+      - user-service
+      - resource-service
+      - booking-service
+      - notification-service
+
+volumes:
+  redis-data:
+    driver: local
+  uploads:
+    driver: local

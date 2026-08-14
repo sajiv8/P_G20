@@ -88,7 +88,6 @@ architecture-diagrams.zip
 architecture  document.md
 interview-guide.md
 DOCKER_SETUP.md
-docker-compose.local.yml
 
 # ----------------------------------------------------------------------------
 # n8n Deployment Scripts
