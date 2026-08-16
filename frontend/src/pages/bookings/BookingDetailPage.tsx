@@ -16,7 +16,7 @@ export function BookingDetailPage() {
   const isAdmin = claims?.app_role === 'main_admin' || claims?.app_role === 'tenant_admin';
 
   const [showEdit, setShowEdit] = useState(false);
-  const [editForm, setEditForm] = useState({ title: '', purpose: '', start_time: '', end_time: '' });
+  const [editForm, setEditForm] = useState({ name: '', purpose: '', start_time: '', end_time: '' });
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +36,7 @@ export function BookingDetailPage() {
         setBooking(res.data);
         if (res.data) {
           setEditForm({
-            title: res.data.title,
+            name: res.data.name || '',
             purpose: res.data.purpose || '',
             start_time: res.data.start_time.substring(0, 16),
             end_time: res.data.end_time.substring(0, 16),
