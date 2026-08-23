@@ -36,7 +36,7 @@ export function BookingDetailPage() {
         setBooking(res.data);
         if (res.data) {
           setEditForm({
-            title: res.data.title || '',
+            title: res.data.title,
             purpose: res.data.purpose || '',
             start_time: res.data.start_time.substring(0, 16),
             end_time: res.data.end_time.substring(0, 16),
