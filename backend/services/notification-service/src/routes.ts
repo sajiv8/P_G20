@@ -161,14 +161,19 @@ async function getTenantName(tenantId: string): Promise<string> {
 // ============================================================================
 async function createNotification(tenantId: string, recipient: string, type: string, title: string, body: string, payload: Record<string, unknown>) {
   const supabase = getSupabaseClient();
-  await supabase.from('notifications').insert({
-    tenant_id: tenantId !== 'system' ? tenantId : null,
+  const { error } = await supabase.from('notifications').insert({
+    tenant_id: tenantId && tenantId !== 'system' ? tenantId : null,
     recipient,
     type,
     title,
     body,
     payload: payload as any,
   });
+  if (error) {
+    logger.error({ error, tenantId, recipient, type, title }, 'Failed to create notification in Supabase');
+  } else {
+    logger.info({ recipient, type, title }, 'In-app notification created');
+  }
 }
 
 // ============================================================================

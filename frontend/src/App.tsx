@@ -22,6 +22,7 @@ import { NewSTResourcePage } from './pages/st-resources/NewSTResourcePage';
 import { EditSTResourcePage } from './pages/st-resources/EditSTResourcePage';
 import { STBorrowsPage } from './pages/st-resources/STBorrowsPage';
 import { ToastContainer } from './components/ToastContainer';
+import { ChatWidget } from './components/ChatWidget';
 
 import './styles/variables.css';
 import './styles/reset.css';
@@ -134,6 +135,7 @@ export default function App() {
           <AppRoutes />
         </AuthProvider>
         <ToastContainer />
+        <ChatWidget />
       </ToastProvider>
     </BrowserRouter>
   );

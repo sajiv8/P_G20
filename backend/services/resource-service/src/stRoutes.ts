@@ -12,6 +12,7 @@ import {
   ApiError,
   sendSuccess,
   logger,
+  publishEvent,
 } from '@rso/shared';
 
 export async function stResourceRoutes(server: FastifyInstance): Promise<void> {
@@ -92,6 +93,17 @@ export async function stResourceRoutes(server: FastifyInstance): Promise<void> {
       .single();
 
     if (error) throw error;
+
+    try {
+      await publishEvent('system-events', {
+        type: 'resource.created',
+        payload: { resource_id: data.id, name: data.name, category: 'ST_RESOURCE', created_by: user.sub, created_by_role: user.appRole },
+        timestamp: new Date().toISOString(),
+        tenantId: user.tenantId || 'system',
+      });
+    } catch (err) {
+      logger.warn({ err }, 'Failed to publish resource event');
+    }
 
     logger.info({ stResourceId: data.id, student: user.sub }, 'ST Resource created');
     sendSuccess(reply, data, 201);

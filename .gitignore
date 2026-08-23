@@ -1,58 +1,145 @@
+# ============================================================================
+# .gitignore — Multi-Tenant Campus Resource Sharing Platform
+# ============================================================================
+
+# ----------------------------------------------------------------------------
 # Dependencies
+# ----------------------------------------------------------------------------
 node_modules/
+package-lock.json
 
-# Build output
+# ----------------------------------------------------------------------------
+# Build Output
+# ----------------------------------------------------------------------------
 dist/
+build/
 *.js.map
+*.tsbuildinfo
 
-# Environment & Secrets
+# ----------------------------------------------------------------------------
+# Environment & Secrets (NEVER commit these)
+# ----------------------------------------------------------------------------
 .env
 .env.local
 .env.*.local
+backend/infra/.env
 
 # Firebase service account keys
+**/firebase-service-account.json
 *-firebase-adminsdk-*.json
-config/firebase-service-account.json
 
-# Scripts with hardcoded secrets (blocked by GitHub push protection)
+# Scripts with hardcoded secrets
 backend/scripts/verify-rls.ts
 
-# SSL Certificates (Origin Cert)
+# ----------------------------------------------------------------------------
+# SSL Certificates
+# ----------------------------------------------------------------------------
+backend/infra/gateway/ssl/*.pem
 infra/gateway/ssl/*.pem
 nginx/ssl/
+*.pem
+*.key
+*.crt
+*.csr
 
-# Sensitive reference files
+# ----------------------------------------------------------------------------
+# Sensitive / Credential Text Files
+# ----------------------------------------------------------------------------
+firebase.txt
+keys.txt
+supabase.txt
+argoCD.txt
+n8n.txt
 supa base.txt
 firebase sdk.txt
 resend.txt
 cloudflare.ini
+github token 90 days.txt
+API_ENDPOINTS_TESTING.md
 
-# OS files
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Logs
-logs/
-*.log
-npm-debug.log*
+# ----------------------------------------------------------------------------
+# Tests, E2E & Mock Files
+# ----------------------------------------------------------------------------
+tests/
+e2e-puppeteer.mjs
+backend/scripts/e2e-test.ts
+backend/scripts/test-firebase-claims.ts
+backend/services/user-service/test-token.js
 
 # Test coverage
 coverage/
 .nyc_output/
+*.lcov
+.jest/
 
-# Temp files
+# ----------------------------------------------------------------------------
+# Documentation (project-specific, not for Git)
+# ----------------------------------------------------------------------------
+n8n_integration_guide.md
+n8n_chatbot_setup_guide_sinhala.md
+n8n_chatbot_workflow.json
+CI-CDGuide.md
+productionCICD.md
+DeploymentGuide.md
+SRS document.md
+Project_Proposal.md
+Feasibility Report Template.md
+architecture-diagrams.zip
+architecture  document.md
+interview-guide.md
+DOCKER_SETUP.md
+
+# ----------------------------------------------------------------------------
+# n8n Deployment Scripts
+# ----------------------------------------------------------------------------
+n8n-deploy-chatbot.mjs
+backend/scripts/n8n-deploy-chatbot.mjs
+
+# ----------------------------------------------------------------------------
+# OS Files
+# ----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+*.lnk
+
+# ----------------------------------------------------------------------------
+# IDE / Editor
+# ----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+
+# ----------------------------------------------------------------------------
+# Logs
+# ----------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# ----------------------------------------------------------------------------
+# Temp / Cache
+# ----------------------------------------------------------------------------
 tmp/
 temp/
-firebase-service-account.json
-firebase.txt
-github token 90 days.txt
-keys.txt
-supabase.txt
-argoCD.txt
-**/firebase-service-account.json
+.cache/
+.parcel-cache/
+*.bak
+*.orig
+*.tmp
+
+# ----------------------------------------------------------------------------
+# Docker (local volumes & overrides)
+# ----------------------------------------------------------------------------
+docker-compose.override.yml
+
