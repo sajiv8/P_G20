@@ -17,7 +17,7 @@ export default defineConfig({
         changeOrigin: true,
       },
       '/webhook': {
-        target: 'https://nn.isuruhub.site:8443',
+        target: 'https://nn.hnasiaexport.com:8443',
         changeOrigin: true,
         secure: false
       },
