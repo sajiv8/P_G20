@@ -22,7 +22,7 @@ spec:
       annotations:
         # CI pipeline updates this hash when gateway-configmap.yaml changes,
         # triggering a pod rollout so Nginx picks up the new config.
-        configmap-hash: "aa708140b2b7cc5836dacc6b614de0ac71dfe20bfb0f3814ea0441b90dc4fe68"
+        configmap-hash: "d2d17b1b70a6c597d8359c5725676a7d5810dd8befc8705b5a07b4c3a6fb6386"
     spec:
       containers:
         - name: gateway

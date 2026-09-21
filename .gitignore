@@ -142,4 +142,5 @@ temp/
 # Docker (local volumes & overrides)
 # ----------------------------------------------------------------------------
 docker-compose.override.yml
+backend/docs/
 

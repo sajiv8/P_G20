@@ -79,7 +79,7 @@ data:
         # HTTP Server
         server {
             listen 80;
-            server_name rso.isuruhub.site localhost;
+            server_name rso.hnasiaexport.com localhost;
 
             location /health {
                 access_log off;
@@ -186,9 +186,9 @@ data:
             }
 
             location /webhook/ {
-                proxy_pass https://nn.isuruhub.site:8443/webhook/;
+                proxy_pass https://nn.hnasiaexport.com:8443/webhook/;
                 proxy_http_version 1.1;
-                proxy_set_header Host nn.isuruhub.site;
+                proxy_set_header Host nn.hnasiaexport.com;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto $scheme;
@@ -209,7 +209,7 @@ data:
         # HTTPS Server
         server {
             listen 443 ssl http2;
-            server_name rso.isuruhub.site localhost;
+            server_name rso.hnasiaexport.com localhost;
 
             ssl_certificate /etc/nginx/ssl/origin.pem;
             ssl_certificate_key /etc/nginx/ssl/origin-key.pem;
@@ -354,9 +354,9 @@ data:
             }
 
             location /webhook/ {
-                proxy_pass https://nn.isuruhub.site:8443/webhook/;
+                proxy_pass https://nn.hnasiaexport.com:8443/webhook/;
                 proxy_http_version 1.1;
-                proxy_set_header Host nn.isuruhub.site;
+                proxy_set_header Host nn.hnasiaexport.com;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto $scheme;
