@@ -17,6 +17,14 @@ import {
   logger,
 } from '@rso/shared';
 import type { StreamEvent } from '@rso/shared';
+import {
+  decideBooking,
+  initialBookingStatus,
+  isCategoryBookableByRole,
+  billableHours,
+  calculateBookingCost,
+  calculateRefund,
+} from './booking-rules';
 
 export async function bookingRoutes(server: FastifyInstance): Promise<void> {
   const supabase = getSupabaseClient();
@@ -138,20 +146,9 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
     if (resource.status !== 'available') throw ApiError.badRequest(`Resource is currently ${resource.status}`);
 
     // Student restriction — can only book EQUIPMENT and ST_RESOURCE
-    if (user.appRole === 'student' && resource.category !== 'EQUIPMENT' && resource.category !== 'ST_RESOURCE') {
+    if (!isCategoryBookableByRole(user.appRole, resource.category)) {
       throw ApiError.forbidden('Students are only allowed to book EQUIPMENT and Student Shared resources.');
     }
-
-    // Define priority weights
-    const priorities: Record<string, number> = {
-      'main_admin': 5,
-      'tenant_admin': 5,
-      'lecturer': 4,
-      'junior_lecturer': 3,
-      'staff': 2,
-      'student': 1
-    };
-    const userPriority = priorities[user.appRole] || 0;
 
     // Check overlaps
     const { data: overlaps } = await supabase
@@ -162,30 +159,27 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       .lt('start_time', body.end_time)
       .gt('end_time', body.start_time);
 
-    let bumpedIds: string[] = [];
-    if (overlaps && overlaps.length > 0) {
-      for (const overlap of overlaps) {
-        const overlapRole = (overlap.user_profiles as any)?.role || 'student';
-        const overlapPriority = priorities[overlapRole] || 0;
-        
-        if (overlapPriority >= userPriority) {
-          throw ApiError.conflict('This time slot is already booked by a user with equal or higher priority.');
-        }
-        bumpedIds.push(overlap.id);
-      }
+    const decision = decideBooking(
+      user.appRole,
+      (overlaps || []).map(overlap => ({
+        id: overlap.id,
+        role: (overlap.user_profiles as any)?.role || 'student',
+      })),
+    );
 
+    if (decision.action === 'conflict') {
+      throw ApiError.conflict('This time slot is already booked by a user with equal or higher priority.');
+    }
+
+    if (decision.bumpedIds.length > 0) {
       // Bump lower priority bookings
       await supabase
         .from('bookings')
         .update({ status: 'bumped' })
-        .in('id', bumpedIds);
+        .in('id', decision.bumpedIds);
     }
 
-    // Determine initial status
-    let initialStatus = 'pending';
-    if (['main_admin', 'tenant_admin', 'lecturer', 'junior_lecturer'].includes(user.appRole)) {
-      initialStatus = 'approved';
-    }
+    const initialStatus = initialBookingStatus(user.appRole);
 
     // Create booking
     const { data: booking, error } = await supabase
@@ -218,10 +212,11 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
     // ---- Student Token Deduction ----
     let tokensDeducted = 0;
     if (user.appRole === 'student' && resource.category === 'EQUIPMENT' && resource.hourly_cost) {
-      const startMs = new Date(body.start_time as string).getTime();
-      const endMs = new Date(body.end_time as string).getTime();
-      const hours = Math.max(1, Math.ceil((endMs - startMs) / (1000 * 60 * 60)));
-      tokensDeducted = Math.ceil(resource.hourly_cost * hours);
+      tokensDeducted = calculateBookingCost(
+        resource.hourly_cost,
+        body.start_time as string,
+        body.end_time as string,
+      );
 
       // Check balance
       const { data: tokenBalance } = await supabase
@@ -248,7 +243,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
         booking_id: booking.id,
         amount: -tokensDeducted,
         type: 'booking_deduction',
-        description: `Booked equipment for ${hours}h (${resource.hourly_cost} tokens/h)`,
+        description: `Booked equipment for ${billableHours(body.start_time as string, body.end_time as string)}h (${resource.hourly_cost} tokens/h)`,
       });
     }
 
@@ -392,7 +387,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
           .single();
 
         if (deduction) {
-          const refundAmount = Math.floor(Math.abs(deduction.amount) / 2); // 50% refund
+          const refundAmount = calculateRefund(deduction.amount);
           if (refundAmount > 0) {
             await supabase
               .from('student_token_balances')
