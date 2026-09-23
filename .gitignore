@@ -154,3 +154,9 @@ backend/docs/
 # Postman environment with real credentials (copy from the .example file)
 tests/postman/campus-rso.postman_environment.json
 tests/postman/newman-report.html
+
+# Cypress — credentials and run artifacts
+cypress.env.json
+tests/cypress/screenshots/
+tests/cypress/videos/
+tests/cypress/downloads/

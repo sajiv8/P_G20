@@ -1,0 +1,134 @@
+# ============================================================================
+# GUI & Cross-Browser Suite — Campus RSO Platform
+# ============================================================================
+# Kept out of ci.yml on purpose. These tests need the whole stack running plus
+# real Firebase and Supabase credentials, so they cannot gate every push the
+# way the unit and integration tests do. They run nightly and on demand.
+#
+# Required repository secrets (Settings → Secrets → Actions):
+#   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY,
+#   SUPABASE_JWT_SECRET, FIREBASE_PROJECT_ID, FIREBASE_API_KEY,
+#   FIREBASE_AUTH_DOMAIN, FIREBASE_SERVICE_ACCOUNT  (the full JSON),
+#   TEST_STUDENT_EMAIL, TEST_STUDENT_PASSWORD,
+#   TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD
+#
+# Until those are set the workflow will fail at the stack-startup step, which
+# is expected — it is not a regression in the application.
+# ============================================================================
+
+name: E2E — GUI & Cross-Browser
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # 02:00 UTC nightly
+  workflow_dispatch:
+
+jobs:
+  gui:
+    name: Cypress GUI Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Write Firebase service account
+        run: |
+          mkdir -p config
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > config/firebase-service-account.json
+
+      - name: Write environment file
+        working-directory: backend/infra
+        run: |
+          cat > .env <<'ENVEOF'
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_JWT_SECRET=${{ secrets.SUPABASE_JWT_SECRET }}
+          FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          REDIS_URL=redis://redis:6379
+          NODE_ENV=test
+          ENVEOF
+
+      - name: Start the stack
+        working-directory: backend/infra
+        run: docker compose up -d --build
+
+      - name: Wait for the gateway
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost/health > /dev/null; then
+              echo "gateway is up"; exit 0
+            fi
+            sleep 5
+          done
+          echo "gateway never became healthy"
+          docker compose -f backend/infra/docker-compose.yml logs --tail=50
+          exit 1
+
+      - name: Write Cypress credentials
+        run: |
+          cat > cypress.env.json <<'JSONEOF'
+          {
+            "studentEmail": "${{ secrets.TEST_STUDENT_EMAIL }}",
+            "studentPassword": "${{ secrets.TEST_STUDENT_PASSWORD }}",
+            "adminEmail": "${{ secrets.TEST_ADMIN_EMAIL }}",
+            "adminPassword": "${{ secrets.TEST_ADMIN_PASSWORD }}"
+          }
+          JSONEOF
+
+      - name: Run the Cypress suite
+        run: npm run test:gui
+
+      - name: Run the API suite
+        if: always()
+        run: |
+          node -e "
+            const fs = require('fs');
+            const env = JSON.parse(fs.readFileSync('cypress.env.json', 'utf8'));
+            const tpl = JSON.parse(fs.readFileSync('tests/postman/campus-rso.postman_environment.example.json', 'utf8'));
+            const set = (k, v) => { tpl.values.find(x => x.key === k).value = v; };
+            set('firebaseApiKey', process.env.FIREBASE_API_KEY);
+            set('studentEmail', env.studentEmail);
+            set('studentPassword', env.studentPassword);
+            set('adminEmail', env.adminEmail);
+            set('adminPassword', env.adminPassword);
+            fs.writeFileSync('tests/postman/campus-rso.postman_environment.json', JSON.stringify(tpl));
+          "
+          npx newman run tests/postman/campus-rso.postman_collection.json \
+            -e tests/postman/campus-rso.postman_environment.json --reporters cli
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+
+      - name: Run the cross-browser smoke journey
+        if: always()
+        run: npm run test:crossbrowser -- --browser=chrome
+
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: tests/cypress/screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Collect service logs on failure
+        if: failure()
+        working-directory: backend/infra
+        run: docker compose logs --tail=200
+
+      - name: Tear down
+        if: always()
+        working-directory: backend/infra
+        run: docker compose down -v

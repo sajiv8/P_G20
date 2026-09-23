@@ -22,12 +22,18 @@
     "clean": "rimraf backend/services/*/dist frontend/dist",
     "test": "npm run test --workspaces --if-present",
     "test:coverage": "npm run test:coverage --workspaces --if-present",
-    "test:api": "newman run tests/postman/campus-rso.postman_collection.json -e tests/postman/campus-rso.postman_environment.json --reporters cli"
+    "test:api": "newman run tests/postman/campus-rso.postman_collection.json -e tests/postman/campus-rso.postman_environment.json --reporters cli",
+    "test:gui": "env -u ELECTRON_RUN_AS_NODE cypress run",
+    "test:gui:open": "env -u ELECTRON_RUN_AS_NODE cypress open",
+    "test:crossbrowser": "node tests/selenium/run.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.108.2",
     "@types/jest": "^30.0.0",
+    "@types/selenium-webdriver": "^4.35.7",
+    "cypress": "^16.1.0",
     "jest": "^30.4.2",
+    "selenium-webdriver": "^4.49.0",
     "ts-jest": "^29.4.12",
     "tsx": "^4.22.4"
   }
