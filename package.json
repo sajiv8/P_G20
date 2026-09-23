@@ -19,7 +19,10 @@
     "dev:resource": "npm run dev -w backend/services/resource-service",
     "dev:booking": "npm run dev -w backend/services/booking-service",
     "dev:notification": "npm run dev -w backend/services/notification-service",
-    "clean": "rimraf backend/services/*/dist frontend/dist"
+    "clean": "rimraf backend/services/*/dist frontend/dist",
+    "test": "npm run test --workspaces --if-present",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
+    "test:api": "newman run tests/postman/campus-rso.postman_collection.json -e tests/postman/campus-rso.postman_environment.json --reporters cli"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.108.2",

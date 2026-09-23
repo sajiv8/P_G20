@@ -14,17 +14,17 @@
     "test:integration": "jest --testPathPatterns=integration"
   },
   "dependencies": {
+    "@fastify/cors": "^11.0.0",
     "@rso/shared": "*",
-    "fastify": "^5.3.0",
-    "@fastify/cors": "^11.0.0"
+    "fastify": "^5.3.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
+    "@types/jest": "^29.5.0",
     "@types/node": "^22.0.0",
-    "tsx": "^4.19.0",
     "jest": "^29.7.0",
+    "newman": "^6.2.2",
     "ts-jest": "^29.2.0",
-    "@types/jest": "^29.5.0"
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
   }
 }
-
