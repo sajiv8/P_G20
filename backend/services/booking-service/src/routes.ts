@@ -151,19 +151,41 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
     }
 
     // Check overlaps
-    const { data: overlaps } = await supabase
+    const { data: overlaps, error: overlapError } = await supabase
       .from('bookings')
-      .select('id, booked_by, user_profiles(role)')
+      .select('id, booked_by')
       .eq('resource_id', body.resource_id)
       .in('status', ['pending', 'approved', 'active'])
       .lt('start_time', body.end_time)
       .gt('end_time', body.start_time);
 
+    // Must not be swallowed: with no overlap list the priority rules see an
+    // empty slot and wave everything through to the database constraint.
+    if (overlapError) throw overlapError;
+
+    // Roles are fetched separately rather than embedded. There is no foreign
+    // key from bookings.booked_by to user_profiles.firebase_uid, so PostgREST
+    // cannot join the two tables.
+    const rolesByUid = new Map<string, string>();
+    const overlapUids = [...new Set((overlaps || []).map(o => o.booked_by).filter(Boolean))];
+
+    if (overlapUids.length > 0) {
+      const { data: profiles, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('firebase_uid, role')
+        .in('firebase_uid', overlapUids);
+
+      if (profileError) throw profileError;
+      for (const profile of profiles || []) {
+        rolesByUid.set(profile.firebase_uid, profile.role);
+      }
+    }
+
     const decision = decideBooking(
       user.appRole,
       (overlaps || []).map(overlap => ({
         id: overlap.id,
-        role: (overlap.user_profiles as any)?.role || 'student',
+        role: rolesByUid.get(overlap.booked_by) || 'student',
       })),
     );
 
