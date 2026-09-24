@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
-import { GraduationCap, Mail, Lock, User, Hash, Loader2, Eye, EyeOff, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { GraduationCap, Mail, Lock, User, Hash, Loader2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/api';
 
 export function SignupPage() {
@@ -16,28 +16,14 @@ export function SignupPage() {
   const [memberId, setMemberId] = useState('');
   const [phone, setPhone] = useState('');
 
-  // OTP verification state
-  const [step, setStep] = useState<'form' | 'verify'>('form');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [otpSending, setOtpSending] = useState(false);
-  const [otpVerifying, setOtpVerifying] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [emailVerified, setEmailVerified] = useState(false);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [step, setStep] = useState<'form' | 'success'>('form');
+  const [signingUp, setSigningUp] = useState(false);
 
   const { signup } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Countdown timer
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const timer = setInterval(() => setCountdown(c => c - 1), 1000);
-    return () => clearInterval(timer);
-  }, [countdown]);
-
-  // Send verification OTP
-  const handleSendOtp = async () => {
+  const handleSignup = async () => {
     if (!email || !email.includes('@')) {
       toast('warning', 'Please enter a valid email address');
       return;
@@ -59,7 +45,7 @@ export function SignupPage() {
       return;
     }
 
-    setOtpSending(true);
+    setSigningUp(true);
     try {
       // Pre-validate faculty code first
       const checkRes = await api.get<{ valid: boolean; tenant_name: string }>(`/users/check-tenant/${tenantCode}`);
@@ -68,107 +54,17 @@ export function SignupPage() {
         return;
       }
 
-      // Send verification email
-      const res = await api.post('/users/send-verification', { email });
-      if (res.success) {
-        toast('success', `Verification code sent to ${email}`);
-        setStep('verify');
-        setCountdown(600); // 10 minutes
-        setOtp(['', '', '', '', '', '']);
-        setTimeout(() => otpRefs.current[0]?.focus(), 100);
-      } else {
-        toast('error', res.error?.message || 'Failed to send verification code');
-      }
-    } catch (err: any) {
-      toast('error', err.message || 'Failed to send verification code');
-    } finally {
-      setOtpSending(false);
-    }
-  };
-
-  // Handle OTP input
-  const handleOtpChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.slice(-1);
-    setOtp(newOtp);
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      otpRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const paste = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
-    if (paste.length === 6) {
-      setOtp(paste.split(''));
-      otpRefs.current[5]?.focus();
-    }
-  };
-
-  // Verify OTP then create account
-  const handleVerifyAndSignup = async () => {
-    const code = otp.join('');
-    if (code.length !== 6) {
-      toast('warning', 'Please enter the complete 6-digit code');
-      return;
-    }
-
-    setOtpVerifying(true);
-    try {
-      // 1. Verify the OTP
-      const verifyRes = await api.post('/users/verify-email', { email, code });
-      if (!verifyRes.success) {
-        toast('error', (verifyRes as any).error?.message || 'Invalid verification code');
-        return;
-      }
-
-      setEmailVerified(true);
-
-      // 2. Create account via Firebase + backend signup
       await signup(email, password, tenantCode, fullName, memberId, phone);
-      toast('success', 'Account created successfully! Welcome to CampusRSO');
-      navigate('/');
+      toast('success', 'Account created successfully!');
+      setStep('success');
     } catch (err: any) {
       const msg = err.code === 'auth/email-already-in-use'
         ? 'An account with this email already exists'
         : err.message || 'Signup failed. Please try again.';
       toast('error', msg);
     } finally {
-      setOtpVerifying(false);
+      setSigningUp(false);
     }
-  };
-
-  // Resend OTP
-  const handleResend = async () => {
-    setOtpSending(true);
-    try {
-      const res = await api.post('/users/send-verification', { email });
-      if (res.success) {
-        toast('success', 'New verification code sent!');
-        setCountdown(600);
-        setOtp(['', '', '', '', '', '']);
-        otpRefs.current[0]?.focus();
-      } else {
-        toast('error', res.error?.message || 'Failed to resend code');
-      }
-    } catch {
-      toast('error', 'Failed to resend code');
-    } finally {
-      setOtpSending(false);
-    }
-  };
-
-  const formatCountdown = (s: number) => {
-    const mins = Math.floor(s / 60);
-    const secs = s % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -184,14 +80,13 @@ export function SignupPage() {
           <p className="auth-subtitle">
             {step === 'form'
               ? 'Join your faculty on CampusRSO'
-              : `Enter the 6-digit code sent to ${email}`
+              : 'Please check your inbox'
             }
           </p>
         </div>
 
         {step === 'form' ? (
-          /* ── Step 1: Registration Form ── */
-          <form className="auth-form" onSubmit={(e: FormEvent) => { e.preventDefault(); handleSendOtp(); }}>
+          <form className="auth-form" onSubmit={(e: FormEvent) => { e.preventDefault(); handleSignup(); }}>
             <div className="input-group">
               <label className="input-label" htmlFor="signup-name">Full Name</label>
               <div style={{ position: 'relative' }}>
@@ -286,93 +181,31 @@ export function SignupPage() {
               </div>
             </div>
 
-            <button className="btn btn-primary btn-full btn-lg" type="submit" disabled={otpSending}>
-              {otpSending ? <Loader2 size={18} className="animate-spin" /> : <Mail size={18} />}
-              {otpSending ? 'Sending Code...' : 'Send Verification Code'}
+            <button className="btn btn-primary btn-full btn-lg" type="submit" disabled={signingUp}>
+              {signingUp ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
+              {signingUp ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
         ) : (
-          /* ── Step 2: OTP Verification ── */
-          <div className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
-            {/* OTP Visual */}
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                width: 64, height: 64, borderRadius: '50%',
-                background: emailVerified ? 'var(--color-success-bg, #dcfce7)' : 'var(--color-primary-bg, #e0e7ff)',
-                color: emailVerified ? 'var(--color-success, #16a34a)' : 'var(--color-primary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                margin: '0 auto var(--space-4)',
-                transition: 'all 0.3s ease',
-              }}>
-                {emailVerified ? <ShieldCheck size={28} /> : <Mail size={28} />}
-              </div>
+          <div className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', textAlign: 'center' }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'var(--color-success-bg, #dcfce7)',
+              color: 'var(--color-success, #16a34a)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto var(--space-4)',
+            }}>
+              <ShieldCheck size={28} />
             </div>
-
-            {/* OTP Input */}
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--space-2)' }} onPaste={handleOtpPaste}>
-              {otp.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={el => { otpRefs.current[i] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={e => handleOtpChange(i, e.target.value)}
-                  onKeyDown={e => handleOtpKeyDown(i, e)}
-                  disabled={otpVerifying || emailVerified}
-                  style={{
-                    width: 42, height: 48,
-                    textAlign: 'center',
-                    fontSize: 'var(--font-size-xl)',
-                    fontWeight: 700,
-                    border: `2px solid ${digit ? 'var(--color-primary)' : 'var(--color-border)'}`,
-                    borderRadius: 'var(--radius-md)',
-                    background: 'var(--color-bg-elevated)',
-                    color: 'var(--color-text)',
-                    outline: 'none',
-                    transition: 'border-color 0.2s ease',
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Countdown */}
-            {countdown > 0 && !emailVerified && (
-              <p style={{ textAlign: 'center', fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
-                Code expires in <span style={{ fontWeight: 600, color: countdown < 60 ? 'var(--color-danger)' : 'var(--color-primary)' }}>{formatCountdown(countdown)}</span>
-              </p>
-            )}
-
-            {/* Verify Button */}
-            <button
-              className="btn btn-primary btn-full btn-lg"
-              onClick={handleVerifyAndSignup}
-              disabled={otpVerifying || otp.join('').length !== 6 || emailVerified}
-            >
-              {otpVerifying ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
-              {otpVerifying ? 'Verifying & Creating Account...' : 'Verify & Create Account'}
+            <p style={{ color: 'var(--color-text)', fontSize: '16px' }}>
+              Your account has been created!
+            </p>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginBottom: '16px' }}>
+              We have sent a verification link to <strong>{email}</strong>. Please check your inbox and verify your email to log in.
+            </p>
+            <button className="btn btn-primary btn-full btn-lg" onClick={() => navigate('/login')}>
+              Go to Login
             </button>
-
-            {/* Resend / Back */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={() => { setStep('form'); setEmailVerified(false); }}
-                disabled={otpVerifying}
-              >
-                <ArrowLeft size={14} /> Back
-              </button>
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={handleResend}
-                disabled={otpSending || otpVerifying || countdown > 540}
-                style={{ fontSize: 'var(--font-size-xs)' }}
-              >
-                {otpSending ? <Loader2 size={14} className="animate-spin" /> : null}
-                Resend Code
-              </button>
-            </div>
           </div>
         )}
 

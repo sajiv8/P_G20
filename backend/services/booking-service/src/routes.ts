@@ -275,12 +275,33 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
     preHandler: [authMiddleware, requireRole('tenant_admin', 'main_admin')],
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
+    const user = request.user!;
+
+    // Fetch booking first to verify tenant ownership
+    const { data: booking, error: fetchErr } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', id)
+      .eq('status', 'pending')
+      .single();
+
+    if (fetchErr || !booking) throw ApiError.notFound('Pending booking');
+
+    // Tenant admin: must belong to the same tenant
+    if (user.appRole === 'tenant_admin') {
+      if (!user.tenantId) {
+        throw ApiError.forbidden('Tenant information missing from your account');
+      }
+      if (booking.tenant_id !== user.tenantId) {
+        throw ApiError.forbidden('You cannot manage bookings from another faculty');
+      }
+    }
 
     const { data, error } = await supabase
       .from('bookings')
       .update({
         status: 'approved',
-        approved_by: request.user!.sub,
+        approved_by: user.sub,
         approved_at: new Date().toISOString(),
       })
       .eq('id', id)
@@ -293,7 +314,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
     try {
       await publishEvent('booking-events', {
         type: 'booking.approved',
-        payload: { booking_id: id, approved_by: request.user!.sub },
+        payload: { booking_id: id, approved_by: user.sub },
         timestamp: new Date().toISOString(),
         tenantId: data.tenant_id,
       });
@@ -301,7 +322,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       logger.warn({ err }, 'Failed to publish approval event');
     }
 
-    logger.info({ bookingId: id, approvedBy: request.user!.sub }, 'Booking approved');
+    logger.info({ bookingId: id, approvedBy: user.sub }, 'Booking approved');
     sendSuccess(reply, data);
   });
 
@@ -313,12 +334,33 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     const { id } = request.params as { id: string };
     const { reason } = (request.body || {}) as { reason?: string };
+    const user = request.user!;
+
+    // Fetch booking first to verify tenant ownership
+    const { data: booking, error: fetchErr } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', id)
+      .eq('status', 'pending')
+      .single();
+
+    if (fetchErr || !booking) throw ApiError.notFound('Pending booking');
+
+    // Tenant admin: must belong to the same tenant
+    if (user.appRole === 'tenant_admin') {
+      if (!user.tenantId) {
+        throw ApiError.forbidden('Tenant information missing from your account');
+      }
+      if (booking.tenant_id !== user.tenantId) {
+        throw ApiError.forbidden('You cannot manage bookings from another faculty');
+      }
+    }
 
     const { data, error } = await supabase
       .from('bookings')
       .update({
         status: 'rejected',
-        approved_by: request.user!.sub,
+        approved_by: user.sub,
         approved_at: new Date().toISOString(),
         notes: reason,
       })
@@ -332,7 +374,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
     try {
       await publishEvent('booking-events', {
         type: 'booking.rejected',
-        payload: { booking_id: id, rejected_by: request.user!.sub, reason },
+        payload: { booking_id: id, rejected_by: user.sub, reason },
         timestamp: new Date().toISOString(),
         tenantId: data.tenant_id,
       });
