@@ -36,46 +36,52 @@ function buildEmailHtml(opts: {
   footer?: string;
 }): string {
   const detailsHtml = opts.details?.length
-    ? `<table style="width:100%;border-collapse:collapse;margin:16px 0;">
-        ${opts.details.map(d => `
-          <tr>
-            <td style="padding:8px 12px;font-size:13px;color:#6b7280;border-bottom:1px solid #f3f4f6;width:140px;">${d.label}</td>
-            <td style="padding:8px 12px;font-size:13px;font-weight:600;color:#1f2937;border-bottom:1px solid #f3f4f6;">${d.value}</td>
-          </tr>
-        `).join('')}
-       </table>`
+    ? `<ul style="margin: 16px 0; padding-left: 20px; color: #374151;">
+        ${opts.details.map(d => `<li style="margin-bottom: 8px;"><strong>${d.label}:</strong> ${d.value}</li>`).join('')}
+       </ul>`
     : '';
 
   const ctaHtml = opts.ctaText && opts.ctaUrl
-    ? `<a href="${opts.ctaUrl}" style="display:inline-block;padding:10px 24px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;margin:16px 0;">${opts.ctaText}</a>`
+    ? `<p style="margin: 28px 0;">
+         <a href="${opts.ctaUrl}" style="background: #2563eb; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 8px; display: inline-block;">
+           ${opts.ctaText}
+         </a>
+       </p>
+       <p style="margin: 16px 0; color: #6b7280; font-size: 14px;">
+         If the button does not work, copy and paste this link into your browser:<br/>
+         <a href="${opts.ctaUrl}" style="color: #2563eb;">${opts.ctaUrl}</a>
+       </p>`
     : '';
 
-  return `
-<!DOCTYPE html>
+  return `<!doctype html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="max-width:560px;margin:0 auto;padding:24px 16px;">
-    <!-- Header -->
-    <div style="text-align:center;padding:20px 0;">
-      <div style="display:inline-block;padding:8px 16px;background:linear-gradient(135deg,#7c3aed,#6366f1);border-radius:8px;">
-        <span style="color:#fff;font-weight:700;font-size:16px;letter-spacing:0.5px;">🎓 CampusRSO</span>
-      </div>
-    </div>
-    <!-- Card -->
-    <div style="background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);padding:32px 24px;margin-bottom:16px;">
-      <h2 style="margin:0 0 8px;font-size:20px;color:#1f2937;">${opts.title}</h2>
-      ${opts.greeting ? `<p style="margin:0 0 16px;font-size:14px;color:#6b7280;">${opts.greeting}</p>` : ''}
-      <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#374151;">${opts.body}</p>
-      ${detailsHtml}
-      ${ctaHtml}
-    </div>
-    <!-- Footer -->
-    <div style="text-align:center;padding:12px 0;">
-      <p style="margin:0;font-size:12px;color:#9ca3af;">
-        ${opts.footer || 'This is an automated notification from CampusRSO. Please do not reply to this email.'}
-      </p>
-    </div>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>${opts.title}</title>
+</head>
+<body style="font-family: Arial, sans-serif; background: #f5f7fb; padding: 24px;">
+  <div style="max-width: 560px; margin: auto; background: #ffffff; padding: 32px; border-radius: 12px;">
+    
+    <h2 style="color: #1f2937; margin-top: 0;">${opts.title}</h2>
+    
+    ${opts.greeting ? `<p style="color: #374151;">${opts.greeting}</p>` : ''}
+    
+    <p style="color: #374151; line-height: 1.5;">${opts.body}</p>
+    
+    ${detailsHtml}
+    
+    ${ctaHtml}
+    
+    <p style="color: #374151;">
+      If you did not request this, you can safely ignore this email.
+    </p>
+    
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0 16px 0;">
+    
+    <p style="font-size: 12px; color: #6b7280; margin: 0;">
+      RSO Campus — Campus Resource Management Platform
+    </p>
   </div>
 </body>
 </html>`;

@@ -145,7 +145,40 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     sendSuccess(reply, { message: 'Password reset successfully. You can now log in with your new password.' });
   });
 
+  // ========================================================================
+  // POST /api/v1/users/resend-verification — Generate and send verification email
+  // ========================================================================
+  server.post('/api/v1/users/resend-verification', {
+    preHandler: [authMiddleware],
+  }, async (request, reply) => {
+    const user = request.user!;
+    if (!user.email) {
+      throw ApiError.badRequest('No email attached to this account.');
+    }
 
+    // Double check they aren't already verified
+    if ((user as any).email_verified) {
+      throw ApiError.badRequest('Email is already verified.');
+    }
+
+    try {
+      const { getAuth } = await import('firebase-admin/auth');
+      const link = await getAuth().generateEmailVerificationLink(user.email);
+      
+      await publishEvent('system-events', {
+        type: 'user.email_verification_requested',
+        payload: { email: user.email, link },
+        timestamp: new Date().toISOString(),
+        tenantId: 'system',
+      });
+      logger.info({ uid: user.sub, email: user.email }, 'Verification email requested via backend');
+    } catch (err) {
+      logger.error({ err, uid: user.sub }, 'Failed to generate verification link');
+      throw ApiError.internal('Failed to generate verification link.');
+    }
+
+    sendSuccess(reply, { message: 'Verification email sent.' });
+  });
 
   // ========================================================================
   // POST /api/v1/users/signup — Create user profile + set Firebase claims

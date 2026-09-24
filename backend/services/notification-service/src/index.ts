@@ -8,6 +8,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { logger, errorHandler } from '@rso/shared';
 import { notificationRoutes, startBookingEventConsumer, startSystemEventConsumer } from './routes';
+import { verifyMailerConnection } from './mail/mailer';
 
 const server = Fastify({ logger: false, ignoreTrailingSlash: true });
 
@@ -28,6 +29,9 @@ const start = async () => {
     const port = parseInt(process.env.NOTIFICATION_SERVICE_PORT || '3005', 10);
     await server.listen({ port, host: '0.0.0.0' });
     logger.info({ port, service: 'notification-service' }, 'Notification Service started');
+
+    // Verify SMTP connection
+    await verifyMailerConnection();
 
     // Start Redis Streams event consumers
     startBookingEventConsumer();

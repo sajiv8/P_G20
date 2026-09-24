@@ -4,8 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { GraduationCap, Mail, Lock, User, Hash, Loader2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/api';
-import { auth } from '../../lib/firebase';
-import { sendEmailVerification } from 'firebase/auth';
+
 
 export function SignupPage() {
   const [fullName, setFullName] = useState('');
@@ -56,16 +55,6 @@ export function SignupPage() {
       }
 
       await signup(email, password, tenantCode, fullName, memberId, phone);
-
-      // Send verification email via Firebase Client SDK
-      if (auth.currentUser && !auth.currentUser.emailVerified) {
-        try {
-          await sendEmailVerification(auth.currentUser);
-        } catch (verifyErr) {
-          // Non-fatal: the user can resend from the verify page
-          console.warn('Could not send verification email:', verifyErr);
-        }
-      }
 
       toast('success', 'Account created! Please verify your email.');
       navigate('/verify-email', { replace: true });
