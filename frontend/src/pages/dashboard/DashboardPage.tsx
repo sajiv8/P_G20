@@ -73,7 +73,7 @@ export function DashboardPage() {
         }
       });
     }
-  }, []);
+  }, [claims?.app_role]);
 
   const statCards = [
     { label: 'Total Resources', value: stats.totalResources, icon: Monitor, color: 'var(--color-primary)', bg: 'var(--color-primary-light)' },

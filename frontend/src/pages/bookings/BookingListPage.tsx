@@ -54,7 +54,7 @@ export function BookingListPage() {
     }).finally(() => setLoading(false));
   };
 
-  useEffect(() => { loadBookings(); }, []);
+  useEffect(() => { loadBookings(); }, [claims?.app_role]);
 
   const handleAction = async (id: string, action: 'approve' | 'reject' | 'cancel') => {
     const res = await api.put(`/bookings/${id}/${action}`);

@@ -2,7 +2,7 @@
  * Notification Service Routes + Event Consumer
  * 
  * Listens to Redis Streams for booking, resource, and user events.
- * Creates in-app notifications + sends styled emails via Resend.
+ * Creates in-app notifications + sends styled emails via Nodemailer (Gmail).
  * 
  * Email recipients:
  * - User: gets confirmation/notification about their own activity
@@ -11,6 +11,7 @@
  */
 
 import { FastifyInstance } from 'fastify';
+import { sendEmailDirect } from './mail/mailer';
 import {
   authMiddleware,
   getSupabaseClient,
@@ -81,36 +82,10 @@ function buildEmailHtml(opts: {
 }
 
 // ============================================================================
-// Email Sender (Resend)
+// Email Sender (Nodemailer)
 // ============================================================================
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.NOTIFICATION_FROM_EMAIL || 'onboarding@resend.dev';
-
-  if (!apiKey) {
-    logger.warn('RESEND_API_KEY not set — skipping email');
-    return;
-  }
-
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ from, to, subject, html }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      logger.error({ err, to, subject }, 'Resend API error');
-    } else {
-      logger.info({ to, subject }, 'Email sent');
-    }
-  } catch (err) {
-    logger.error({ err, to, subject }, 'Failed to send email');
-  }
+  await sendEmailDirect({ to, subject, html });
 }
 
 // ============================================================================
@@ -450,6 +425,34 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
     }
 
     // ── User Events ───────────────────────────────────────────────────────
+    case 'user.email_verification_requested': {
+      const email = payload.email as string;
+      const link = payload.link as string;
+      if (email && link) {
+        const html = buildEmailHtml({
+          title: 'Verify your email address',
+          greeting: `Hello,`,
+          body: 'Welcome to the Campus Resource Management Platform. Please verify your email address to activate your account.<br/><br/><a href="' + link + '" style="background-color: #6366f1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a><br/><br/>This link was generated securely through Firebase Authentication. If you did not create this account, you can ignore this email.',
+        });
+        await sendEmail(email, 'Verify your email address — CampusRSO', html);
+      }
+      return;
+    }
+
+    case 'user.password_reset_requested': {
+      const email = payload.email as string;
+      const link = payload.link as string;
+      if (email && link) {
+        const html = buildEmailHtml({
+          title: 'Password Reset',
+          greeting: `Hello,`,
+          body: 'We received a request to reset your password. Click the link below to set a new password.<br/><br/><a href="' + link + '" style="background-color: #6366f1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a><br/><br/>This link was generated securely through Firebase Authentication. If you did not request a password reset, please ignore this email.',
+        });
+        await sendEmail(email, 'Password Reset — CampusRSO', html);
+      }
+      return;
+    }
+
     case 'user.signup': {
       const email = payload.email as string;
       const fullName = payload.full_name as string || 'New User';
@@ -605,6 +608,34 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
         ],
       });
       await notifyAdmins(tenantId, `User Deleted — ${tenantName}`, adminHtml, 'user_deleted', 'User Deleted', `${fullName} has been removed.`, payload);
+      return;
+    }
+
+    case 'user.email_verification_requested': {
+      const email = payload.email as string;
+      const link = payload.link as string;
+
+      const html = buildEmailHtml({
+        title: 'Verify Your Email',
+        body: `Please verify your email address to continue setting up your account.`,
+        ctaText: 'Verify Email',
+        ctaUrl: link,
+      });
+      await sendEmailDirect({ to: email, subject: 'CampusRSO — Verify your email', html });
+      return;
+    }
+
+    case 'user.password_reset_requested': {
+      const email = payload.email as string;
+      const link = payload.link as string;
+
+      const html = buildEmailHtml({
+        title: 'Reset Your Password',
+        body: `We received a request to reset your password. Click the button below to choose a new one.`,
+        ctaText: 'Reset Password',
+        ctaUrl: link,
+      });
+      await sendEmailDirect({ to: email, subject: 'CampusRSO — Password Reset', html });
       return;
     }
 
