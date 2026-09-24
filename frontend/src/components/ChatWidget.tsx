@@ -7,11 +7,41 @@ export function ChatWidget() {
     link.href = 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css';
     document.head.appendChild(link);
 
-    // Add custom CSS to hide the "Powered by n8n" branding
+    // Custom CSS: hide n8n branding + reposition on mobile above bottom nav
     const style = document.createElement('style');
     style.innerHTML = `
+      /* Hide "Powered by n8n" branding */
       .chat-footer > a, .n8n-chat-footer > a, a[href*="n8n.io"] {
         display: none !important;
+      }
+
+      /* ── Mobile: move chat launcher + window above bottom nav ── */
+      @media (max-width: 767px) {
+        /* The n8n chat toggle button */
+        .n8n-chat .chat-window-toggle {
+          bottom: calc(
+            var(--bottomnav-height, 60px)
+            + env(safe-area-inset-bottom, 0px)
+            + 16px
+          ) !important;
+          right: 16px !important;
+        }
+
+        /* The chat window itself */
+        .n8n-chat .chat-window-wrapper {
+          bottom: calc(
+            var(--bottomnav-height, 60px)
+            + env(safe-area-inset-bottom, 0px)
+            + 16px
+          ) !important;
+          right: 8px !important;
+          max-height: calc(
+            100dvh
+            - var(--bottomnav-height, 60px)
+            - env(safe-area-inset-bottom, 0px)
+            - 32px
+          ) !important;
+        }
       }
     `;
     document.head.appendChild(style);

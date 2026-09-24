@@ -4,6 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { GraduationCap, Mail, Lock, User, Hash, Loader2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/api';
+import { auth } from '../../lib/firebase';
+import { sendEmailVerification } from 'firebase/auth';
 
 export function SignupPage() {
   const [fullName, setFullName] = useState('');
@@ -16,7 +18,6 @@ export function SignupPage() {
   const [memberId, setMemberId] = useState('');
   const [phone, setPhone] = useState('');
 
-  const [step, setStep] = useState<'form' | 'success'>('form');
   const [signingUp, setSigningUp] = useState(false);
 
   const { signup } = useAuth();
@@ -55,8 +56,19 @@ export function SignupPage() {
       }
 
       await signup(email, password, tenantCode, fullName, memberId, phone);
-      toast('success', 'Account created successfully!');
-      setStep('success');
+
+      // Send verification email via Firebase Client SDK
+      if (auth.currentUser && !auth.currentUser.emailVerified) {
+        try {
+          await sendEmailVerification(auth.currentUser);
+        } catch (verifyErr) {
+          // Non-fatal: the user can resend from the verify page
+          console.warn('Could not send verification email:', verifyErr);
+        }
+      }
+
+      toast('success', 'Account created! Please verify your email.');
+      navigate('/verify-email', { replace: true });
     } catch (err: any) {
       const msg = err.code === 'auth/email-already-in-use'
         ? 'An account with this email already exists'
@@ -74,140 +86,110 @@ export function SignupPage() {
           <div className="auth-logo-icon">
             <GraduationCap size={28} />
           </div>
-          <h1 className="auth-title">
-            {step === 'form' ? 'Create Account' : 'Verify Email'}
-          </h1>
-          <p className="auth-subtitle">
-            {step === 'form'
-              ? 'Join your faculty on CampusRSO'
-              : 'Please check your inbox'
-            }
-          </p>
+          <h1 className="auth-title">Create Account</h1>
+          <p className="auth-subtitle">Join your faculty on CampusRSO</p>
         </div>
 
-        {step === 'form' ? (
-          <form className="auth-form" onSubmit={(e: FormEvent) => { e.preventDefault(); handleSignup(); }}>
-            <div className="input-group">
-              <label className="input-label" htmlFor="signup-name">Full Name</label>
-              <div style={{ position: 'relative' }}>
-                <User size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                <input id="signup-name" className="input" type="text" placeholder="John Doe" value={fullName} onChange={e => setFullName(e.target.value)} required style={{ paddingLeft: 40 }} />
-              </div>
+        <form className="auth-form" onSubmit={(e: FormEvent) => { e.preventDefault(); handleSignup(); }}>
+          <div className="input-group">
+            <label className="input-label" htmlFor="signup-name">Full Name</label>
+            <div style={{ position: 'relative' }}>
+              <User size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+              <input id="signup-name" className="input" type="text" placeholder="John Doe" value={fullName} onChange={e => setFullName(e.target.value)} required style={{ paddingLeft: 40 }} />
             </div>
-
-            <div className="input-group">
-              <label className="input-label" htmlFor="signup-email">Email</label>
-              <div style={{ position: 'relative' }}>
-                <Mail size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                <input id="signup-email" className="input" type="email" placeholder="you@gmail.com or you@uom.lk" value={email} onChange={e => setEmail(e.target.value)} required style={{ paddingLeft: 40 }} />
-              </div>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label" htmlFor="signup-password">Password</label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                <input
-                  id="signup-password"
-                  className="input"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Min 6 characters"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                  style={{ paddingLeft: 40, paddingRight: 40 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0 }}
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label" htmlFor="signup-confirm-password">Re-enter Password</label>
-              <div style={{ position: 'relative' }}>
-                <Lock size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                <input
-                  id="signup-confirm-password"
-                  className="input"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm your password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  required
-                  style={{ paddingLeft: 40, paddingRight: 40 }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0 }}
-                >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label" htmlFor="signup-code">Faculty Code</label>
-              <div style={{ position: 'relative' }}>
-                <Hash size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                <input id="signup-code" className="input" type="text" placeholder="Enter code from admin" value={tenantCode} onChange={e => setTenantCode(e.target.value)} required style={{ paddingLeft: 40 }} />
-              </div>
-              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                Ask your department admin for the faculty code
-              </span>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label" htmlFor="signup-member-id">Member ID *</label>
-              <div style={{ position: 'relative' }}>
-                <Hash size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                <input id="signup-member-id" className="input" type="text" placeholder="e.g. 230571F" value={memberId} onChange={e => setMemberId(e.target.value.toUpperCase())} required style={{ paddingLeft: 40 }} />
-              </div>
-              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
-                Your unique university member ID
-              </span>
-            </div>
-
-            <div className="input-group">
-              <label className="input-label" htmlFor="signup-phone">Mobile Number <span style={{ color: 'var(--color-text-muted)' }}>(optional)</span></label>
-              <div style={{ position: 'relative' }}>
-                <Hash size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                <input id="signup-phone" className="input" type="tel" placeholder="+94 77 123 4567" value={phone} onChange={e => setPhone(e.target.value)} style={{ paddingLeft: 40 }} />
-              </div>
-            </div>
-
-            <button className="btn btn-primary btn-full btn-lg" type="submit" disabled={signingUp}>
-              {signingUp ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
-              {signingUp ? 'Creating Account...' : 'Create Account'}
-            </button>
-          </form>
-        ) : (
-          <div className="auth-form" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-5)', textAlign: 'center' }}>
-            <div style={{
-              width: 64, height: 64, borderRadius: '50%',
-              background: 'var(--color-success-bg, #dcfce7)',
-              color: 'var(--color-success, #16a34a)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto var(--space-4)',
-            }}>
-              <ShieldCheck size={28} />
-            </div>
-            <p style={{ color: 'var(--color-text)', fontSize: '16px' }}>
-              Your account has been created!
-            </p>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginBottom: '16px' }}>
-              We have sent a verification link to <strong>{email}</strong>. Please check your inbox and verify your email to log in.
-            </p>
-            <button className="btn btn-primary btn-full btn-lg" onClick={() => navigate('/login')}>
-              Go to Login
-            </button>
           </div>
-        )}
+
+          <div className="input-group">
+            <label className="input-label" htmlFor="signup-email">Email</label>
+            <div style={{ position: 'relative' }}>
+              <Mail size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+              <input id="signup-email" className="input" type="email" placeholder="you@gmail.com or you@uom.lk" value={email} onChange={e => setEmail(e.target.value)} required style={{ paddingLeft: 40 }} />
+            </div>
+          </div>
+
+          <div className="input-group">
+            <label className="input-label" htmlFor="signup-password">Password</label>
+            <div style={{ position: 'relative' }}>
+              <Lock size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+              <input
+                id="signup-password"
+                className="input"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Min 6 characters"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+                style={{ paddingLeft: 40, paddingRight: 40 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0 }}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="input-group">
+            <label className="input-label" htmlFor="signup-confirm-password">Re-enter Password</label>
+            <div style={{ position: 'relative' }}>
+              <Lock size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+              <input
+                id="signup-confirm-password"
+                className="input"
+                type={showConfirmPassword ? 'text' : 'password'}
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                required
+                style={{ paddingLeft: 40, paddingRight: 40 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0 }}
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="input-group">
+            <label className="input-label" htmlFor="signup-code">Faculty Code</label>
+            <div style={{ position: 'relative' }}>
+              <Hash size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+              <input id="signup-code" className="input" type="text" placeholder="Enter code from admin" value={tenantCode} onChange={e => setTenantCode(e.target.value)} required style={{ paddingLeft: 40 }} />
+            </div>
+            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+              Ask your department admin for the faculty code
+            </span>
+          </div>
+
+          <div className="input-group">
+            <label className="input-label" htmlFor="signup-member-id">Member ID *</label>
+            <div style={{ position: 'relative' }}>
+              <Hash size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+              <input id="signup-member-id" className="input" type="text" placeholder="e.g. 230571F" value={memberId} onChange={e => setMemberId(e.target.value.toUpperCase())} required style={{ paddingLeft: 40 }} />
+            </div>
+            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)' }}>
+              Your unique university member ID
+            </span>
+          </div>
+
+          <div className="input-group">
+            <label className="input-label" htmlFor="signup-phone">Mobile Number <span style={{ color: 'var(--color-text-muted)' }}>(optional)</span></label>
+            <div style={{ position: 'relative' }}>
+              <Hash size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+              <input id="signup-phone" className="input" type="tel" placeholder="+94 77 123 4567" value={phone} onChange={e => setPhone(e.target.value)} style={{ paddingLeft: 40 }} />
+            </div>
+          </div>
+
+          <button className="btn btn-primary btn-full btn-lg" type="submit" disabled={signingUp}>
+            {signingUp ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
+            {signingUp ? 'Creating Account...' : 'Create Account'}
+          </button>
+        </form>
 
         <p className="auth-footer">
           Already have an account? <Link to="/login">Sign in</Link>
@@ -216,4 +198,3 @@ export function SignupPage() {
     </div>
   );
 }
-

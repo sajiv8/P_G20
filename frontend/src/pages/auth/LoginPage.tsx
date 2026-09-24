@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { GraduationCap, Mail, Lock, Loader2, Eye, EyeOff } from 'lucide-react';
+import { auth } from '../../lib/firebase';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,8 +21,16 @@ export function LoginPage() {
       // Support username login: 'admin' → admin@campusrso.local
       const loginEmail = email.includes('@') ? email : `${email}@campusrso.local`;
       await login(loginEmail, password);
-      toast('success', 'Welcome back!');
-      navigate('/');
+
+      // Check if user is verified before allowing dashboard access
+      const currentUser = auth.currentUser;
+      if (currentUser && !currentUser.emailVerified) {
+        toast('warning', 'Please verify your email before continuing.');
+        navigate('/verify-email', { replace: true });
+      } else {
+        toast('success', 'Welcome back!');
+        navigate('/');
+      }
     } catch (err: any) {
       const msg = err.code === 'auth/invalid-credential' ? 'Invalid email or password'
         : err.code === 'auth/user-not-found' ? 'No account found with this email'
