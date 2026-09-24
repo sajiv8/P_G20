@@ -1,4 +1,5 @@
 import './commands';
+import './a11y';
 
 // Deliberately no global storage clearing here. Cypress already isolates
 // cookies and localStorage between tests, and cy.session restores them. Wiping

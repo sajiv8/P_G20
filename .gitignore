@@ -160,3 +160,9 @@ cypress.env.json
 tests/cypress/screenshots/
 tests/cypress/videos/
 tests/cypress/downloads/
+
+# JMeter run artifacts
+tests/jmeter/results/
+
+# ZAP scan reports
+tests/security/reports/

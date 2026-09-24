@@ -132,3 +132,72 @@ jobs:
         if: always()
         working-directory: backend/infra
         run: docker compose down -v
+
+  # --------------------------------------------------------------------------
+  # Passive security scan. Needs no credentials — it only spiders what is
+  # reachable without signing in, which is the point: it checks what an
+  # unauthenticated stranger can see.
+  # --------------------------------------------------------------------------
+  security-scan:
+    name: OWASP ZAP Baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Write Firebase service account
+        run: |
+          mkdir -p config
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}' > config/firebase-service-account.json
+
+      - name: Write environment file
+        working-directory: backend/infra
+        run: |
+          cat > .env <<'ENVEOF'
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_JWT_SECRET=${{ secrets.SUPABASE_JWT_SECRET }}
+          FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          REDIS_URL=redis://redis:6379
+          NODE_ENV=test
+          ENVEOF
+
+      - name: Start the stack
+        working-directory: backend/infra
+        run: docker compose up -d --build
+
+      - name: Wait for the gateway
+        run: |
+          for i in $(seq 1 60); do
+            curl -sf http://localhost/health > /dev/null && exit 0
+            sleep 5
+          done
+          echo "gateway never became healthy"; exit 1
+
+      # On a Linux runner the stack is on localhost, so --network host works
+      # and host.docker.internal is unnecessary.
+      - name: ZAP baseline scan
+        run: |
+          mkdir -p tests/security/reports
+          docker run --rm --network host \
+            -v "$PWD/tests/security/reports:/zap/wrk:rw" \
+            zaproxy/zap-stable \
+            zap-baseline.py -t http://localhost \
+            -r zap-report.html -J zap-report.json -I
+
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-report
+          path: tests/security/reports/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: Tear down
+        if: always()
+        working-directory: backend/infra
+        run: docker compose down -v

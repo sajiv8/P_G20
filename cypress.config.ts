@@ -15,5 +15,14 @@ export default defineConfig({
     viewportHeight: 800,
     defaultCommandTimeout: 10000,
     retries: { runMode: 1, openMode: 0 },
+    setupNodeEvents(on) {
+      // Lets the accessibility spec print its findings into the run output.
+      on('task', {
+        log(message: string) {
+          console.log(message);
+          return null;
+        },
+      });
+    },
   },
 });
