@@ -166,3 +166,6 @@ tests/jmeter/results/
 
 # ZAP scan reports
 tests/security/reports/
+
+# Real SUS responses (keep participant data out of git)
+tests/usability/responses.csv
