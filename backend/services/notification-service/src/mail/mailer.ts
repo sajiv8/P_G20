@@ -10,6 +10,15 @@ const transporter = nodemailer.createTransport({
   },
 });
 
+export async function verifyMailerConnection(): Promise<void> {
+  try {
+    await transporter.verify();
+    logger.info('Gmail SMTP transport ready');
+  } catch (error) {
+    logger.error({ err: error }, 'Gmail SMTP transport unavailable');
+  }
+}
+
 interface SendEmailParams {
   to: string;
   subject: string;
@@ -34,10 +43,14 @@ export async function sendEmailDirect({ to, subject, html, text }: SendEmailPara
       to,
       subject,
       html,
-      text: text || html.replace(/<[^>]*>?/gm, ''), // Basic HTML to text fallback
+      text: text || html.replace(/<[^>]*>?/gm, '').replace(/\s+/g, ' ').trim(), // Basic HTML to text fallback
     });
     
-    logger.info({ messageId: info.messageId, to, subject }, 'Email sent successfully');
+    logger.info({ 
+      messageId: info.messageId, 
+      accepted: info.accepted, 
+      rejected: info.rejected 
+    }, 'Email sent successfully via Nodemailer');
   } catch (error) {
     logger.error({ err: error, to, subject }, 'Failed to send email via Nodemailer');
   }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { auth } from '../../lib/firebase';
-import { sendEmailVerification } from 'firebase/auth';
+import { api } from '../../lib/api';
 import { GraduationCap, Mail, Loader2, RefreshCw, LogOut, CheckCircle2 } from 'lucide-react';
 
 export function VerifyEmailPage() {
@@ -56,11 +56,17 @@ export function VerifyEmailPage() {
     if (!auth.currentUser || cooldown > 0) return;
     setResending(true);
     try {
-      await sendEmailVerification(auth.currentUser);
-      toast('success', 'Verification email sent! Check your inbox.');
-      setCooldown(60); // 60 second cooldown
+      // Call backend to trigger generateEmailVerificationLink() + Nodemailer flow
+      const res = await api.post('/users/resend-verification');
+      
+      if (res.success) {
+        toast('success', 'Verification email sent! Check your inbox.');
+        setCooldown(60); // 60 second cooldown
+      } else {
+        toast('error', res.error?.message || 'Failed to send verification email.');
+      }
     } catch (err: any) {
-      if (err.code === 'auth/too-many-requests') {
+      if (err.status === 429) {
         toast('error', 'Too many requests. Please wait a few minutes before trying again.');
         setCooldown(120);
       } else {
