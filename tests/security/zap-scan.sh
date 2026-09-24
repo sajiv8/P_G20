@@ -11,6 +11,12 @@
 # environment — never production.
 #
 # Findings are written to tests/security/reports/ as HTML and JSON.
+#
+# IMPORTANT: the gateway rate-limits by IP (10 r/s general, 5 r/s on bookings).
+# ZAP's spider is faster than that, so it collects mostly 429s and can stall.
+# For a meaningful scan, either raise the limits temporarily or exempt the
+# scanner's IP with a `geo`/`map` block feeding limit_req_zone. Do not run
+# other test suites at the same time — they will be throttled by the scan.
 
 set -euo pipefail
 
