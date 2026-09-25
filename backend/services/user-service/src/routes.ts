@@ -370,6 +370,24 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
       throw profileErr;
     }
 
+    // Students need a token balance, the same as they get from self-signup —
+    // without it they cannot book any resource that has an hourly cost.
+    if (userRole === 'student') {
+      await supabase.from('student_token_balances').insert({
+        firebase_uid: firebaseUser.uid,
+        tenant_id: tenant.id,
+        balance: 100,
+        monthly_quota: 100,
+      });
+
+      await supabase.from('token_transactions').insert({
+        firebase_uid: firebaseUser.uid,
+        amount: 100,
+        type: 'monthly_renewal',
+        description: 'Initial token allocation on registration',
+      });
+    }
+
     // Set Firebase claims
     await setUserClaims(firebaseUser.uid, tenant.id, userRole as any);
 
@@ -965,14 +983,42 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
       throw ApiError.badRequest('Provide balance or monthly_quota to update');
     }
 
-    const { data, error } = await supabase
+    const updated = await supabase
       .from('student_token_balances')
       .update(updates)
       .eq('firebase_uid', uid)
       .select()
       .single();
 
-    if (error || !data) throw ApiError.notFound('Student token balance');
+    let data = updated.data;
+
+    // No balance row yet — accounts created before this was fixed have none,
+    // and without an upsert here an admin has no way to repair them.
+    if (!data) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('tenant_id')
+        .eq('firebase_uid', uid)
+        .single();
+
+      if (!profile) throw ApiError.notFound('User');
+
+      const created = await supabase
+        .from('student_token_balances')
+        .insert({
+          firebase_uid: uid,
+          tenant_id: profile.tenant_id,
+          balance: balance ?? monthly_quota ?? 0,
+          monthly_quota: monthly_quota ?? balance ?? 0,
+        })
+        .select()
+        .single();
+
+      if (created.error) throw created.error;
+      data = created.data;
+    }
+
+    if (!data) throw ApiError.internal('Failed to update student token balance');
 
     // Log admin adjustment
     await supabase.from('token_transactions').insert({

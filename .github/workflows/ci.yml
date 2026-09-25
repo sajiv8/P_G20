@@ -1,11 +1,16 @@
 # ============================================================================
 # GitHub Actions CI Pipeline — Campus RSO Platform
 # ============================================================================
-# Triggers on push to main branch
-# Builds Docker images for all microservices and pushes to GHCR
+# 1. Quality gate  — lint, type-check and run the test suites
+# 2. Security scan — committed secrets and vulnerable dependencies
+# 3. Build         — Docker images for every service, pushed to GHCR
+# 4. Deploy        — update the Kubernetes manifests for ArgoCD
+#
+# The build stage will not start unless the quality gate passes, so a failing
+# test stops a broken image from ever reaching the registry.
 # ============================================================================
 
-name: CI — Build & Push Docker Images
+name: CI — Test, Build & Push
 
 on:
   push:
@@ -16,13 +21,98 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/rso
+  NODE_VERSION: 22
 
 jobs:
+  # --------------------------------------------------------------------------
+  # Quality gate — everything here must pass before anything is built
+  # --------------------------------------------------------------------------
+  test:
+    name: Lint, Type-check & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Compiles @rso/shared first, then every service. This is also the
+      # type-check: tsc fails the job on any type error.
+      # @rso/shared MUST build before the services — they import its types
+      # from dist/, so nothing type-checks until it exists.
+      - name: Build backend (type-check)
+        run: npm run build:backend
+
+      # Reports without blocking: the frontend currently has 61 pre-existing
+      # lint errors (mostly `no-explicit-any` and react-hooks/exhaustive-deps).
+      # Clear those, then remove continue-on-error to make linting a hard gate.
+      - name: Lint frontend
+        continue-on-error: true
+        run: npm run lint -w frontend
+
+      # Runs `tsc -b && vite build`, so this type-checks the frontend too.
+      - name: Build frontend (type-check)
+        run: npm run build -w frontend
+
+      - name: Run unit & integration tests
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: backend/services/*/coverage/
+          retention-days: 14
+          if-no-files-found: ignore
+
+  # --------------------------------------------------------------------------
+  # Security scanning
+  # --------------------------------------------------------------------------
+  # NOTE: both steps are currently set to `continue-on-error: true` so they
+  # report without blocking. Flip them to false once the findings are cleared —
+  # gitleaks will fail today because backend/infra/gateway/ssl/origin-key.pem
+  # (a TLS private key) is committed to this repository and needs to be
+  # rotated and purged from history first.
+  # --------------------------------------------------------------------------
+  security:
+    name: Secret & Dependency Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so gitleaks can scan past commits
+
+      - name: Scan for committed secrets
+        continue-on-error: true
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --no-banner --redact --verbose
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Audit dependencies
+        continue-on-error: true
+        run: npm audit --audit-level=high
+
   # --------------------------------------------------------------------------
   # Build Frontend
   # --------------------------------------------------------------------------
   build-frontend:
     name: Build Frontend
+    needs: [test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,7 +124,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
@@ -66,6 +157,7 @@ jobs:
   # --------------------------------------------------------------------------
   build-services:
     name: Build ${{ matrix.service }}
+    needs: [test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -135,4 +227,3 @@ jobs:
           git add k8s/overlays/production/kustomization.yaml k8s/base/gateway.yaml
           git diff --staged --quiet || git commit -m "ci: update image tags to ${{ github.sha }}"
           git push
-
