@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { api } from '../../lib/api';
 import { ImageCropModal } from '../../components/ImageCropModal';
+import { resolveAvatarUrl } from '../../lib/avatar';
 import {
   User, Mail, Phone, Hash, Shield, Camera, Save, LogOut, Trash2,
   Edit3, X, Loader2, Calendar,
@@ -31,7 +32,7 @@ const roleLabels: Record<string, string> = {
 };
 
 export function ProfilePage() {
-  const { user, logout } = useAuth();
+  const { user, logout, avatarUrl, setAvatarUrl } = useAuth();
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,6 +55,7 @@ export function ProfilePage() {
           setEditName(res.data.full_name || '');
           setEditPhone(res.data.phone || '');
           setEditMemberId(res.data.member_id || '');
+          setAvatarUrl(resolveAvatarUrl(res.data.avatar_url));
         }
       }).finally(() => setLoading(false));
     }
@@ -108,6 +110,7 @@ export function ProfilePage() {
     if (res.success && (res.data as any)?.avatar_url) {
       const newUrl = (res.data as any).avatar_url + '?t=' + Date.now();
       setProfile(prev => prev ? { ...prev, avatar_url: newUrl } : null);
+      setAvatarUrl(resolveAvatarUrl(newUrl));
       toast('success', 'Avatar updated');
     } else {
       toast('error', res.error?.message || 'Failed to upload avatar');
@@ -127,29 +130,6 @@ export function ProfilePage() {
     setDeleting(false);
   };
 
-  const getAvatarUrl = () => {
-    if (profile?.avatar_url) {
-      // Strip cache-busting param for path check
-      const cleanUrl = profile.avatar_url.split('?')[0];
-      // If it's a relative upload path, resolve via the API origin
-      if (cleanUrl.startsWith('/uploads/')) {
-        const apiBase = import.meta.env.VITE_API_URL || '/api/v1';
-        // If API is relative, use same origin; otherwise extract the API origin
-        if (apiBase.startsWith('/')) {
-          return `${window.location.origin}${profile.avatar_url}`;
-        }
-        try {
-          const apiOrigin = new URL(apiBase).origin;
-          return `${apiOrigin}${profile.avatar_url}`;
-        } catch {
-          return `${window.location.origin}${profile.avatar_url}`;
-        }
-      }
-      return profile.avatar_url;
-    }
-    return null;
-  };
-
   if (loading) {
     return (
       <div>
@@ -160,7 +140,6 @@ export function ProfilePage() {
   }
 
   const initials = (profile?.full_name || user?.email || 'U')[0].toUpperCase();
-  const avatarUrl = getAvatarUrl();
 
   const content = (
     <div style={{ maxWidth: 800, margin: '0 auto' }}>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../../lib/api';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { resolveAvatarUrl } from '../../lib/avatar';
 import {
   Users, Search, Mail, Calendar, Trash2, Plus, X, Loader2,
   ShieldBan, ShieldCheck, Coins,
@@ -15,6 +16,7 @@ interface UserProfile {
   role: string;
   phone?: string;
   member_id?: string;
+  avatar_url?: string;
   is_active: boolean;
   created_at: string;
   tenant_id: string;
@@ -160,15 +162,26 @@ export function AdminUsersPage() {
               <tr key={user.firebase_uid} style={{ opacity: user.is_active ? 1 : 0.6 }}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-                    <div style={{
-                      width: 36, height: 36, borderRadius: '50%',
-                      background: user.is_active ? 'var(--gradient-primary)' : 'linear-gradient(135deg, #fca5a5, #f87171)',
-                      color: 'white',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 'var(--font-size-sm)', fontWeight: 700,
-                    }}>
-                      {(user.full_name || user.email)[0].toUpperCase()}
-                    </div>
+                    {resolveAvatarUrl(user.avatar_url) ? (
+                      <img
+                        src={resolveAvatarUrl(user.avatar_url)!}
+                        alt=""
+                        style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          objectFit: 'cover', opacity: user.is_active ? 1 : 0.6,
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: 36, height: 36, borderRadius: '50%',
+                        background: user.is_active ? 'var(--gradient-primary)' : 'linear-gradient(135deg, #fca5a5, #f87171)',
+                        color: 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 'var(--font-size-sm)', fontWeight: 700,
+                      }}>
+                        {(user.full_name || user.email)[0].toUpperCase()}
+                      </div>
+                    )}
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
                         <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{user.full_name || '—'}</span>

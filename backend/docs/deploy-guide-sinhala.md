@@ -17,7 +17,7 @@
 | Domain Name | `pro.isuruhub.site` (Cloudflare DNS හරහා) |
 | Supabase Account | Database එක සඳහා |
 | Firebase Project | Authentication සඳහා |
-| Resend Account | Email notifications සඳහා |
+| Gmail Account | Email notifications සඳහා (App Password) |
 
 ---
 
@@ -140,13 +140,16 @@ FIREBASE_API_KEY=ඔබේ-api-key
 FIREBASE_AUTH_DOMAIN=campus-rso.firebaseapp.com
 
 # Supabase — ඔබේ project details
-SUPABASE_URL=https://jpdotxyhemgkwlnlyhpz.supabase.co
+SUPABASE_URL=https://rdgtbggsrjamaglsjetr.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=ඔබේ-service-role-key
 SUPABASE_ANON_KEY=ඔබේ-anon-key
 SUPABASE_JWT_SECRET=ඔබේ-jwt-secret
 
-# Resend — Email සඳහා
-RESEND_API_KEY=ඔබේ-resend-api-key
+# Gmail — Email සඳහා
+MAIL_USER=ඔබේ-gmail-address
+MAIL_APP_PASSWORD=ඔබේ-gmail-app-password
+MAIL_FROM="RSO Campus <rsocampus@gmail.com>"
+EMAIL_PROVIDER=gmail
 
 # Production mode
 NODE_ENV=production

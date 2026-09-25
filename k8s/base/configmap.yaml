@@ -11,4 +11,6 @@ data:
   LOG_LEVEL: "info"
   OPTIMIZATION_SCAN_INTERVAL: "86400000"
   FIREBASE_PROJECT_ID: "campus-rso"
+  EMAIL_PROVIDER: "gmail"
+  MAIL_FROM: "RSO Campus <rsocampus@gmail.com>"
 

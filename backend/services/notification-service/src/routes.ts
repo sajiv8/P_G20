@@ -2,7 +2,7 @@
  * Notification Service Routes + Event Consumer
  * 
  * Listens to Redis Streams for booking, resource, and user events.
- * Creates in-app notifications + sends styled emails via Resend.
+ * Creates in-app notifications + sends styled emails via Nodemailer (Gmail).
  * 
  * Email recipients:
  * - User: gets confirmation/notification about their own activity
@@ -11,6 +11,7 @@
  */
 
 import { FastifyInstance } from 'fastify';
+import { sendEmailDirect } from './mail/mailer';
 import {
   authMiddleware,
   getSupabaseClient,
@@ -35,82 +36,62 @@ function buildEmailHtml(opts: {
   footer?: string;
 }): string {
   const detailsHtml = opts.details?.length
-    ? `<table style="width:100%;border-collapse:collapse;margin:16px 0;">
-        ${opts.details.map(d => `
-          <tr>
-            <td style="padding:8px 12px;font-size:13px;color:#6b7280;border-bottom:1px solid #f3f4f6;width:140px;">${d.label}</td>
-            <td style="padding:8px 12px;font-size:13px;font-weight:600;color:#1f2937;border-bottom:1px solid #f3f4f6;">${d.value}</td>
-          </tr>
-        `).join('')}
-       </table>`
+    ? `<ul style="margin: 16px 0; padding-left: 20px; color: #374151;">
+        ${opts.details.map(d => `<li style="margin-bottom: 8px;"><strong>${d.label}:</strong> ${d.value}</li>`).join('')}
+       </ul>`
     : '';
 
   const ctaHtml = opts.ctaText && opts.ctaUrl
-    ? `<a href="${opts.ctaUrl}" style="display:inline-block;padding:10px 24px;background:#7c3aed;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;margin:16px 0;">${opts.ctaText}</a>`
+    ? `<p style="margin: 28px 0;">
+         <a href="${opts.ctaUrl}" style="background: #2563eb; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 8px; display: inline-block;">
+           ${opts.ctaText}
+         </a>
+       </p>
+       <p style="margin: 16px 0; color: #6b7280; font-size: 14px;">
+         If the button does not work, copy and paste this link into your browser:<br/>
+         <a href="${opts.ctaUrl}" style="color: #2563eb;">${opts.ctaUrl}</a>
+       </p>`
     : '';
 
-  return `
-<!DOCTYPE html>
+  return `<!doctype html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <div style="max-width:560px;margin:0 auto;padding:24px 16px;">
-    <!-- Header -->
-    <div style="text-align:center;padding:20px 0;">
-      <div style="display:inline-block;padding:8px 16px;background:linear-gradient(135deg,#7c3aed,#6366f1);border-radius:8px;">
-        <span style="color:#fff;font-weight:700;font-size:16px;letter-spacing:0.5px;">🎓 CampusRSO</span>
-      </div>
-    </div>
-    <!-- Card -->
-    <div style="background:#fff;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);padding:32px 24px;margin-bottom:16px;">
-      <h2 style="margin:0 0 8px;font-size:20px;color:#1f2937;">${opts.title}</h2>
-      ${opts.greeting ? `<p style="margin:0 0 16px;font-size:14px;color:#6b7280;">${opts.greeting}</p>` : ''}
-      <p style="margin:0 0 16px;font-size:14px;line-height:1.6;color:#374151;">${opts.body}</p>
-      ${detailsHtml}
-      ${ctaHtml}
-    </div>
-    <!-- Footer -->
-    <div style="text-align:center;padding:12px 0;">
-      <p style="margin:0;font-size:12px;color:#9ca3af;">
-        ${opts.footer || 'This is an automated notification from CampusRSO. Please do not reply to this email.'}
-      </p>
-    </div>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>${opts.title}</title>
+</head>
+<body style="font-family: Arial, sans-serif; background: #f5f7fb; padding: 24px;">
+  <div style="max-width: 560px; margin: auto; background: #ffffff; padding: 32px; border-radius: 12px;">
+    
+    <h2 style="color: #1f2937; margin-top: 0;">${opts.title}</h2>
+    
+    ${opts.greeting ? `<p style="color: #374151;">${opts.greeting}</p>` : ''}
+    
+    <p style="color: #374151; line-height: 1.5;">${opts.body}</p>
+    
+    ${detailsHtml}
+    
+    ${ctaHtml}
+    
+    <p style="color: #374151;">
+      If you did not request this, you can safely ignore this email.
+    </p>
+    
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0 16px 0;">
+    
+    <p style="font-size: 12px; color: #6b7280; margin: 0;">
+      RSO Campus — Campus Resource Management Platform
+    </p>
   </div>
 </body>
 </html>`;
 }
 
 // ============================================================================
-// Email Sender (Resend)
+// Email Sender (Nodemailer)
 // ============================================================================
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY;
-  const from = process.env.NOTIFICATION_FROM_EMAIL || 'onboarding@resend.dev';
-
-  if (!apiKey) {
-    logger.warn('RESEND_API_KEY not set — skipping email');
-    return;
-  }
-
-  try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({ from, to, subject, html }),
-    });
-
-    if (!response.ok) {
-      const err = await response.text();
-      logger.error({ err, to, subject }, 'Resend API error');
-    } else {
-      logger.info({ to, subject }, 'Email sent');
-    }
-  } catch (err) {
-    logger.error({ err, to, subject }, 'Failed to send email');
-  }
+  await sendEmailDirect({ to, subject, html });
 }
 
 // ============================================================================
@@ -161,14 +142,19 @@ async function getTenantName(tenantId: string): Promise<string> {
 // ============================================================================
 async function createNotification(tenantId: string, recipient: string, type: string, title: string, body: string, payload: Record<string, unknown>) {
   const supabase = getSupabaseClient();
-  await supabase.from('notifications').insert({
-    tenant_id: tenantId !== 'system' ? tenantId : null,
+  const { error } = await supabase.from('notifications').insert({
+    tenant_id: tenantId && tenantId !== 'system' ? tenantId : null,
     recipient,
     type,
     title,
     body,
     payload: payload as any,
   });
+  if (error) {
+    logger.error({ error, tenantId, recipient, type, title }, 'Failed to create notification in Supabase');
+  } else {
+    logger.info({ recipient, type, title }, 'In-app notification created');
+  }
 }
 
 // ============================================================================
@@ -339,6 +325,41 @@ async function handleBookingEvent(event: StreamEvent): Promise<void> {
       return;
     }
 
+    case 'booking.bumped': {
+      // The owner lost this slot to someone with higher priority and did not
+      // choose to. Say so plainly, and confirm the refund.
+      const uid = await getBookingOwner(payload.booking_id as string);
+      if (!uid) return;
+
+      const refunded = Number(payload.tokens_refunded) || 0;
+      const refundLine = refunded > 0
+        ? `All ${refunded} tokens have been returned to your balance.`
+        : 'No tokens were charged for this booking.';
+
+      const userEmail = await getUserEmail(uid);
+      const html = buildEmailHtml({
+        title: 'Your booking was replaced',
+        body:
+          'A user with higher booking priority has taken this time slot. ' +
+          `Your booking has been cancelled. ${refundLine} You can book another slot at any time.`,
+        details: [
+          { label: 'Booking ID', value: (payload.booking_id as string).slice(0, 8) },
+          { label: 'Tokens returned', value: String(refunded) },
+        ],
+      });
+
+      await createNotification(
+        tenantId,
+        uid,
+        'booking_bumped',
+        'Your booking was replaced',
+        `A higher-priority user has taken this slot. ${refundLine}`,
+        payload,
+      );
+      if (userEmail) await sendEmail(userEmail, 'Your booking was replaced — CampusRSO', html);
+      return;
+    }
+
     case 'booking.updated': {
       const uid = await getBookingOwner(payload.booking_id as string);
       if (!uid) return;
@@ -445,6 +466,7 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
     }
 
     // ── User Events ───────────────────────────────────────────────────────
+
     case 'user.signup': {
       const email = payload.email as string;
       const fullName = payload.full_name as string || 'New User';
@@ -600,6 +622,34 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
         ],
       });
       await notifyAdmins(tenantId, `User Deleted — ${tenantName}`, adminHtml, 'user_deleted', 'User Deleted', `${fullName} has been removed.`, payload);
+      return;
+    }
+
+    case 'user.email_verification_requested': {
+      const email = payload.email as string;
+      const link = payload.link as string;
+
+      const html = buildEmailHtml({
+        title: 'Verify Your Email',
+        body: `Please verify your email address to continue setting up your account.`,
+        ctaText: 'Verify Email',
+        ctaUrl: link,
+      });
+      await sendEmailDirect({ to: email, subject: 'CampusRSO — Verify your email', html });
+      return;
+    }
+
+    case 'user.password_reset_requested': {
+      const email = payload.email as string;
+      const link = payload.link as string;
+
+      const html = buildEmailHtml({
+        title: 'Reset Your Password',
+        body: `We received a request to reset your password. Click the button below to choose a new one.`,
+        ctaText: 'Reset Password',
+        ctaUrl: link,
+      });
+      await sendEmailDirect({ to: email, subject: 'CampusRSO — Password Reset', html });
       return;
     }
 

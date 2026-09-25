@@ -20,6 +20,9 @@ import {
 import { initFirebaseAdmin } from './firebase-admin';
 import { setUserClaims, updateUserRole, clearUserClaims, getUserClaims } from './firebase-claims';
 
+/** Wrong guesses allowed against a one-time code before it is discarded. */
+const MAX_OTP_ATTEMPTS = 5;
+
 export async function userRoutes(server: FastifyInstance): Promise<void> {
   const supabase = getSupabaseClient();
 
@@ -77,70 +80,23 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
       throw ApiError.badRequest('No account found with the provided email and ID combination');
     }
 
-    const redis = getRedisClient();
-    const rateLimitKey = `pwd-reset-rate:${email}`;
-    const otpKey = `pwd-reset:${email}`;
+    try {
+      const { getAuth } = await import('firebase-admin/auth');
+      const link = await getAuth().generatePasswordResetLink(email);
 
-    // Rate limit: max 5 attempts per 15 minutes
-    const sendCount = await redis.incr(rateLimitKey);
-    if (sendCount === 1) {
-      await redis.expire(rateLimitKey, 900);
-    }
-    if (sendCount > 5) {
-      throw ApiError.tooManyRequests('Too many reset attempts. Please wait 15 minutes.');
-    }
-
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Store in Redis with 10 min TTL
-    await redis.set(otpKey, JSON.stringify({ otp, uid: userProfile.firebase_uid }), 'EX', 600);
-
-    // Send email via Resend
-    const apiKey = process.env.RESEND_API_KEY;
-    const from = process.env.NOTIFICATION_FROM_EMAIL || 'onboarding@resend.dev';
-
-    if (apiKey) {
-      try {
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            from,
-            to: email,
-            subject: 'CampusRSO — Password Reset Code',
-            html: `
-              <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
-                <div style="text-align: center; margin-bottom: 24px;">
-                  <h1 style="color: #6366f1; margin: 0;">CampusRSO</h1>
-                  <p style="color: #6b7280; margin-top: 4px;">Password Reset</p>
-                </div>
-                <div style="background: #f9fafb; border-radius: 12px; padding: 32px; text-align: center;">
-                  <p style="color: #374151; font-size: 16px; margin-bottom: 8px;">Hello ${userProfile.full_name || 'User'},</p>
-                  <p style="color: #6b7280; font-size: 14px; margin-bottom: 16px;">Your password reset code is:</p>
-                  <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #6366f1; background: white; border-radius: 8px; padding: 16px; border: 2px dashed #c7d2fe;">
-                    ${otp}
-                  </div>
-                  <p style="color: #9ca3af; font-size: 13px; margin-top: 16px;">This code expires in 10 minutes.</p>
-                </div>
-                <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">If you didn't request a password reset, please ignore this email.</p>
-              </div>
-            `,
-          }),
-        });
-        logger.info({ email }, 'Password reset OTP sent');
-      } catch (err) {
-        logger.error({ err, email }, 'Failed to send password reset email');
-        throw ApiError.internal('Failed to send reset email. Please try again.');
-      }
-    } else {
-      logger.warn({ email, otp }, 'RESEND_API_KEY not set — OTP logged for dev');
+      await publishEvent('system-events', {
+        type: 'user.password_reset_requested',
+        payload: { email, link },
+        timestamp: new Date().toISOString(),
+        tenantId: 'system',
+      });
+      logger.info({ email }, 'Password reset link generated and event published');
+    } catch (err) {
+      logger.error({ err, email }, 'Failed to generate password reset link');
+      throw ApiError.internal('Failed to generate reset link. Please try again.');
     }
 
-    sendSuccess(reply, { message: 'Reset code sent to your email', email });
+    sendSuccess(reply, { message: 'If an account exists, a reset link has been sent to your email.' });
   });
 
   // ========================================================================
@@ -159,6 +115,7 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
 
     const redis = getRedisClient();
     const otpKey = `pwd-reset:${email}`;
+    const attemptsKey = `pwd-reset-attempts:${email}`;
     const storedData = await redis.get(otpKey);
 
     if (!storedData) {
@@ -172,8 +129,22 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
       throw ApiError.badRequest('Invalid reset session. Please request a new code.');
     }
 
+    // A guessed reset code hands over the account, so the guess allowance
+    // matters more here than anywhere else.
+    const attempts = await redis.incr(attemptsKey);
+    if (attempts === 1) await redis.expire(attemptsKey, 600);
+
+    if (attempts > MAX_OTP_ATTEMPTS) {
+      await redis.del(otpKey);
+      logger.warn({ email, attempts }, 'Password reset code burned after too many attempts');
+      throw ApiError.tooManyRequests('Too many incorrect codes. Please request a new one.');
+    }
+
     if (parsed.otp !== code.trim()) {
-      throw ApiError.badRequest('Invalid reset code. Please try again.');
+      const remaining = MAX_OTP_ATTEMPTS - attempts;
+      throw ApiError.badRequest(
+        `Invalid reset code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`,
+      );
     }
 
     // Update password in Firebase Auth
@@ -187,125 +158,45 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
 
     // Clean up Redis
     await redis.del(otpKey);
+    await redis.del(attemptsKey);
 
     logger.info({ email, uid: parsed.uid }, 'Password reset successfully');
     sendSuccess(reply, { message: 'Password reset successfully. You can now log in with your new password.' });
   });
 
   // ========================================================================
-  // POST /api/v1/users/send-verification — Send OTP to email before signup
+  // POST /api/v1/users/resend-verification — Generate and send verification email
   // ========================================================================
-  server.post('/api/v1/users/send-verification', async (request, reply) => {
-    const { email } = request.body as { email: string };
-
-    if (!email || !email.includes('@')) {
-      throw ApiError.badRequest('A valid email address is required');
+  server.post('/api/v1/users/resend-verification', {
+    preHandler: [authMiddleware],
+  }, async (request, reply) => {
+    const user = request.user!;
+    if (!user.email) {
+      throw ApiError.badRequest('No email attached to this account.');
     }
 
-    // Check if email is already registered
-    const { data: existing } = await supabase
-      .from('user_profiles')
-      .select('firebase_uid')
-      .eq('email', email)
-      .single();
-
-    if (existing) {
-      throw ApiError.conflict('An account with this email already exists');
+    // Double check they aren't already verified
+    if ((user as any).email_verified) {
+      throw ApiError.badRequest('Email is already verified.');
     }
 
-    const redis = getRedisClient();
-    const rateLimitKey = `email-verify-rate:${email}`;
-    const otpKey = `email-verify:${email}`;
-
-    // Rate limit: max 5 sends per 10 minutes
-    const sendCount = await redis.incr(rateLimitKey);
-    if (sendCount === 1) {
-      await redis.expire(rateLimitKey, 600); // 10 min window
-    }
-    if (sendCount > 5) {
-      throw ApiError.tooManyRequests('Too many verification attempts. Please wait 10 minutes.');
-    }
-
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    // Store in Redis with 10 min TTL
-    await redis.set(otpKey, otp, 'EX', 600);
-
-    // Send email via Resend
-    const apiKey = process.env.RESEND_API_KEY;
-    const from = process.env.NOTIFICATION_FROM_EMAIL || 'onboarding@resend.dev';
-
-    if (apiKey) {
-      try {
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            from,
-            to: email,
-            subject: 'CampusRSO — Email Verification Code',
-            html: `
-              <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
-                <div style="text-align: center; margin-bottom: 24px;">
-                  <h1 style="color: #6366f1; margin: 0;">CampusRSO</h1>
-                  <p style="color: #6b7280; margin-top: 4px;">Campus Resource Sharing Platform</p>
-                </div>
-                <div style="background: #f9fafb; border-radius: 12px; padding: 32px; text-align: center;">
-                  <p style="color: #374151; font-size: 16px; margin-bottom: 16px;">Your verification code is:</p>
-                  <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #6366f1; background: white; border-radius: 8px; padding: 16px; border: 2px dashed #c7d2fe;">
-                    ${otp}
-                  </div>
-                  <p style="color: #9ca3af; font-size: 13px; margin-top: 16px;">This code expires in 10 minutes.</p>
-                </div>
-                <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">If you didn't request this, please ignore this email.</p>
-              </div>
-            `,
-          }),
-        });
-        logger.info({ email }, 'Verification OTP sent');
-      } catch (err) {
-        logger.error({ err, email }, 'Failed to send verification email');
-        throw ApiError.internal('Failed to send verification email. Please try again.');
-      }
-    } else {
-      logger.warn({ email, otp }, 'RESEND_API_KEY not set — OTP logged for dev');
+    try {
+      const { getAuth } = await import('firebase-admin/auth');
+      const link = await getAuth().generateEmailVerificationLink(user.email);
+      
+      await publishEvent('system-events', {
+        type: 'user.email_verification_requested',
+        payload: { email: user.email, link },
+        timestamp: new Date().toISOString(),
+        tenantId: 'system',
+      });
+      logger.info({ uid: user.sub, email: user.email }, 'Verification email requested via backend');
+    } catch (err) {
+      logger.error({ err, uid: user.sub }, 'Failed to generate verification link');
+      throw ApiError.internal('Failed to generate verification link.');
     }
 
-    sendSuccess(reply, { message: 'Verification code sent to your email', email });
-  });
-
-  // ========================================================================
-  // POST /api/v1/users/verify-email — Validate OTP before signup
-  // ========================================================================
-  server.post('/api/v1/users/verify-email', async (request, reply) => {
-    const { email, code } = request.body as { email: string; code: string };
-
-    if (!email || !code) {
-      throw ApiError.badRequest('Email and verification code are required');
-    }
-
-    const redis = getRedisClient();
-    const otpKey = `email-verify:${email}`;
-    const storedOtp = await redis.get(otpKey);
-
-    if (!storedOtp) {
-      throw ApiError.badRequest('Verification code has expired. Please request a new one.');
-    }
-
-    if (storedOtp !== code.trim()) {
-      throw ApiError.badRequest('Invalid verification code. Please try again.');
-    }
-
-    // OTP is valid — mark as verified in Redis (for signup to check)
-    await redis.set(`email-verified:${email}`, 'true', 'EX', 1800); // 30 min to complete signup
-    await redis.del(otpKey); // Remove used OTP
-
-    logger.info({ email }, 'Email verified via OTP');
-    sendSuccess(reply, { verified: true, message: 'Email verified successfully' });
+    sendSuccess(reply, { message: 'Verification email sent.' });
   });
 
   // ========================================================================
@@ -391,8 +282,19 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
         timestamp: new Date().toISOString(),
         tenantId: tenant.id,
       });
+
+      if (user.email) {
+        const { getAuth } = await import('firebase-admin/auth');
+        const link = await getAuth().generateEmailVerificationLink(user.email);
+        await publishEvent('system-events', {
+          type: 'user.email_verification_requested',
+          payload: { email: user.email, link },
+          timestamp: new Date().toISOString(),
+          tenantId: 'system',
+        });
+      }
     } catch (err) {
-      logger.warn({ err }, 'Failed to publish user.signup event (non-fatal)');
+      logger.warn({ err }, 'Failed to publish events (non-fatal)');
     }
 
     sendSuccess(reply, {
@@ -485,6 +387,24 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
       // Rollback Firebase user
       try { await getAuth().deleteUser(firebaseUser.uid); } catch {}
       throw profileErr;
+    }
+
+    // Students need a token balance, the same as they get from self-signup —
+    // without it they cannot book any resource that has an hourly cost.
+    if (userRole === 'student') {
+      await supabase.from('student_token_balances').insert({
+        firebase_uid: firebaseUser.uid,
+        tenant_id: tenant.id,
+        balance: 100,
+        monthly_quota: 100,
+      });
+
+      await supabase.from('token_transactions').insert({
+        firebase_uid: firebaseUser.uid,
+        amount: 100,
+        type: 'monthly_renewal',
+        description: 'Initial token allocation on registration',
+      });
     }
 
     // Set Firebase claims
@@ -684,10 +604,8 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
 
     // Sync Firebase custom claims
     if (tenant_id !== undefined) {
-      const { setUserClaims } = await import('./firebase-claims');
       await setUserClaims(uid, data.tenant_id, role as any);
     } else {
-      const { updateUserRole } = await import('./firebase-claims');
       await updateUserRole(uid, role as any);
     }
 
@@ -1082,14 +1000,42 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
       throw ApiError.badRequest('Provide balance or monthly_quota to update');
     }
 
-    const { data, error } = await supabase
+    const updated = await supabase
       .from('student_token_balances')
       .update(updates)
       .eq('firebase_uid', uid)
       .select()
       .single();
 
-    if (error || !data) throw ApiError.notFound('Student token balance');
+    let data = updated.data;
+
+    // No balance row yet — accounts created before this was fixed have none,
+    // and without an upsert here an admin has no way to repair them.
+    if (!data) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('tenant_id')
+        .eq('firebase_uid', uid)
+        .single();
+
+      if (!profile) throw ApiError.notFound('User');
+
+      const created = await supabase
+        .from('student_token_balances')
+        .insert({
+          firebase_uid: uid,
+          tenant_id: profile.tenant_id,
+          balance: balance ?? monthly_quota ?? 0,
+          monthly_quota: monthly_quota ?? balance ?? 0,
+        })
+        .select()
+        .single();
+
+      if (created.error) throw created.error;
+      data = created.data;
+    }
+
+    if (!data) throw ApiError.internal('Failed to update student token balance');
 
     // Log admin adjustment
     await supabase.from('token_transactions').insert({

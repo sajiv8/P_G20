@@ -27,7 +27,7 @@ A microservices-based platform for managing shared resources (lecture halls, lab
 | **User** | 3002 | Profiles, signup, role management, Firebase claims |
 | **Resource** | 3003 | Resource catalog, availability checks |
 | **Booking** | 3004 | Booking CRUD, approve/reject workflow, conflict detection |
-| **Notification** | 3005 | In-app notifications, email via Resend, Redis event consumer |
+| **Notification** | 3005 | In-app notifications, email via Nodemailer + Gmail, Redis event consumer |
 | **Gateway** | 80/443 | Nginx reverse proxy, rate limiting, TLS |
 | **Redis** | 6379 | Event streaming between services |
 
@@ -37,7 +37,7 @@ A microservices-based platform for managing shared resources (lecture halls, lab
 - **Database:** Supabase (PostgreSQL) with Row Level Security
 - **Auth:** Firebase Authentication + Custom Claims
 - **Events:** Redis Streams (pub/sub)
-- **Email:** Resend API
+- **Email:** Nodemailer (Gmail SMTP)
 - **Gateway:** Nginx with rate limiting
 - **Containers:** Docker + Docker Compose
 - **DNS/TLS:** Cloudflare (Origin Certificate, Full Strict mode)
@@ -50,7 +50,7 @@ A microservices-based platform for managing shared resources (lecture halls, lab
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - A [Supabase](https://supabase.com/) project
 - A [Firebase](https://firebase.google.com/) project with Authentication enabled
-- A [Resend](https://resend.com/) account (for email notifications)
+- A Gmail account for Nodemailer and a Firebase project with Authentication
 
 ---
 
@@ -75,7 +75,7 @@ Required secrets:
 - **Firebase:** `FIREBASE_PROJECT_ID`, `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`
 - **Firebase Admin SDK:** Place your service account JSON at `config/firebase-service-account.json`
 - **Supabase:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET`
-- **Resend:** `RESEND_API_KEY`
+- **Email System:** `MAIL_USER`, `MAIL_APP_PASSWORD`
 
 ### 3. Run Database Migrations
 
@@ -274,4 +274,4 @@ npx tsx scripts/verify-rls.ts
 
 ## License
 
-Private — University of Kelaniya
+Private — University of Moratuwa
