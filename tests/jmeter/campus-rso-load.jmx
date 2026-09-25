@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="CampusRSO Load Test" enabled="true">
+      <stringProp name="TestPlan.comments">Load and rate-limit tests for the Campus Resource Sharing Platform. Runs through the Nginx gateway. Every value is overridable with -J, so the same plan serves a quick local check and a full report run.</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="User Defined Variables" enabled="true">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="baseUrl" elementType="Argument">
+            <stringProp name="Argument.name">baseUrl</stringProp>
+            <stringProp name="Argument.value">${__P(baseUrl,localhost)}</stringProp>
+          </elementProp>
+          <elementProp name="basePort" elementType="Argument">
+            <stringProp name="Argument.name">basePort</stringProp>
+            <stringProp name="Argument.value">${__P(basePort,80)}</stringProp>
+          </elementProp>
+          <elementProp name="firebaseApiKey" elementType="Argument">
+            <stringProp name="Argument.name">firebaseApiKey</stringProp>
+            <stringProp name="Argument.value">${__P(firebaseApiKey,)}</stringProp>
+          </elementProp>
+          <elementProp name="studentEmail" elementType="Argument">
+            <stringProp name="Argument.name">studentEmail</stringProp>
+            <stringProp name="Argument.value">${__P(studentEmail,)}</stringProp>
+          </elementProp>
+          <elementProp name="studentPassword" elementType="Argument">
+            <stringProp name="Argument.name">studentPassword</stringProp>
+            <stringProp name="Argument.value">${__P(studentPassword,)}</stringProp>
+          </elementProp>
+          <elementProp name="users" elementType="Argument">
+            <stringProp name="Argument.name">users</stringProp>
+            <stringProp name="Argument.value">${__P(users,50)}</stringProp>
+          </elementProp>
+          <elementProp name="rampUp" elementType="Argument">
+            <stringProp name="Argument.name">rampUp</stringProp>
+            <stringProp name="Argument.value">${__P(rampUp,30)}</stringProp>
+          </elementProp>
+          <elementProp name="duration" elementType="Argument">
+            <stringProp name="Argument.name">duration</stringProp>
+            <stringProp name="Argument.value">${__P(duration,300)}</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+    </TestPlan>
+    <hashTree>
+
+      <!-- =================================================================
+           setUp: sign in once and share the token with every thread group
+           ================================================================= -->
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="setUp — Authenticate" enabled="true">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <stringProp name="LoopController.loops">1</stringProp>
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+        </elementProp>
+      </SetupThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Firebase signInWithPassword" enabled="true">
+          <stringProp name="HTTPSampler.domain">identitytoolkit.googleapis.com</stringProp>
+          <stringProp name="HTTPSampler.protocol">https</stringProp>
+          <stringProp name="HTTPSampler.path">/v1/accounts:signInWithPassword?key=${firebaseApiKey}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"email":"${studentEmail}","password":"${studentPassword}","returnSecureToken":true}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="JSON headers" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          <JSONPostProcessor guiclass="JSONPostProcessorGui" testclass="JSONPostProcessor" testname="Extract idToken" enabled="true">
+            <stringProp name="JSONPostProcessor.referenceNames">idToken</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.idToken</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">1</stringProp>
+          </JSONPostProcessor>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="Share token as a property" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="script">def token = vars.get("idToken")
+if (!token || token == "NOT_FOUND") {
+    log.error("Firebase sign-in failed. Check firebaseApiKey, studentEmail and studentPassword.")
+    throw new RuntimeException("Could not obtain a Firebase ID token")
+}
+props.put("idToken", token)
+log.info("Obtained Firebase ID token (" + token.length() + " chars)")</stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Sign-in returns 200" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+
+        <!-- =================================================================
+             TC-PERF-01 — Baseline browsing
+             Target: p95 under 500 ms, error rate under 1%
+             ================================================================= -->
+        <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="TC-PERF-01 Baseline browsing" enabled="true">
+          <stringProp name="ThreadGroup.num_threads">${users}</stringProp>
+          <stringProp name="ThreadGroup.ramp_time">${rampUp}</stringProp>
+          <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+          <boolProp name="ThreadGroup.scheduler">true</boolProp>
+          <stringProp name="ThreadGroup.duration">${duration}</stringProp>
+          <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+            <stringProp name="LoopController.loops">-1</stringProp>
+            <boolProp name="LoopController.continue_forever">true</boolProp>
+          </elementProp>
+        </ThreadGroup>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Authorization" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${__P(idToken)}</stringProp>
+              </elementProp>
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET resources" enabled="true">
+            <stringProp name="HTTPSampler.domain">${baseUrl}</stringProp>
+            <stringProp name="HTTPSampler.port">${basePort}</stringProp>
+            <stringProp name="HTTPSampler.path">/api/v1/resources/?limit=20</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="200 OK" enabled="true">
+              <collectionProp name="Asserion.test_strings">
+                <stringProp name="49586">200</stringProp>
+              </collectionProp>
+              <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+              <intProp name="Assertion.test_type">8</intProp>
+            </ResponseAssertion>
+            <hashTree/>
+            <DurationAssertion guiclass="DurationAssertionGui" testclass="DurationAssertion" testname="Under 2s" enabled="true">
+              <stringProp name="DurationAssertion.duration">2000</stringProp>
+            </DurationAssertion>
+            <hashTree/>
+          </hashTree>
+
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET my bookings" enabled="true">
+            <stringProp name="HTTPSampler.domain">${baseUrl}</stringProp>
+            <stringProp name="HTTPSampler.port">${basePort}</stringProp>
+            <stringProp name="HTTPSampler.path">/api/v1/bookings/?my_bookings=true&amp;limit=20</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="200 OK" enabled="true">
+              <collectionProp name="Asserion.test_strings">
+                <stringProp name="49586">200</stringProp>
+              </collectionProp>
+              <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+              <intProp name="Assertion.test_type">8</intProp>
+            </ResponseAssertion>
+            <hashTree/>
+          </hashTree>
+
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="GET notifications" enabled="true">
+            <stringProp name="HTTPSampler.domain">${baseUrl}</stringProp>
+            <stringProp name="HTTPSampler.port">${basePort}</stringProp>
+            <stringProp name="HTTPSampler.path">/api/v1/notifications/unread-count</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+
+          <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Think time" enabled="true">
+            <stringProp name="ConstantTimer.delay">500</stringProp>
+            <stringProp name="RandomTimer.range">1000</stringProp>
+          </UniformRandomTimer>
+          <hashTree/>
+        </hashTree>
+
+        <!-- =================================================================
+             TC-PERF-03 — Rate-limit validation
+             The gateway allows 5 r/s with a burst of 10 on /api/v1/bookings.
+             A single client pushing harder than that must start seeing 503s.
+             ================================================================= -->
+        <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="TC-PERF-03 Rate limit validation" enabled="true">
+          <stringProp name="ThreadGroup.num_threads">${__P(rateUsers,20)}</stringProp>
+          <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+          <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+          <boolProp name="ThreadGroup.scheduler">true</boolProp>
+          <stringProp name="ThreadGroup.duration">${__P(rateDuration,20)}</stringProp>
+          <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+            <stringProp name="LoopController.loops">-1</stringProp>
+            <boolProp name="LoopController.continue_forever">true</boolProp>
+          </elementProp>
+        </ThreadGroup>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Authorization" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${__P(idToken)}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Hammer bookings endpoint" enabled="true">
+            <stringProp name="HTTPSampler.domain">${baseUrl}</stringProp>
+            <stringProp name="HTTPSampler.port">${basePort}</stringProp>
+            <stringProp name="HTTPSampler.path">/api/v1/bookings/?limit=1</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree/>
+        </hashTree>
+
+        <!-- Raw results; the HTML report is generated from this file. -->
+        <ResultCollector guiclass="SimpleDataWriter" testclass="ResultCollector" testname="Results" enabled="true">
+          <boolProp name="ResultCollector.error_logging">false</boolProp>
+          <objProp>
+            <name>saveConfig</name>
+            <value class="SampleSaveConfiguration">
+              <time>true</time>
+              <latency>true</latency>
+              <timestamp>true</timestamp>
+              <success>true</success>
+              <label>true</label>
+              <code>true</code>
+              <message>true</message>
+              <threadName>true</threadName>
+              <dataType>false</dataType>
+              <encoding>false</encoding>
+              <assertions>true</assertions>
+              <subresults>false</subresults>
+              <responseData>false</responseData>
+              <samplerData>false</samplerData>
+              <xml>false</xml>
+              <fieldNames>true</fieldNames>
+              <responseHeaders>false</responseHeaders>
+              <requestHeaders>false</requestHeaders>
+              <responseDataOnError>false</responseDataOnError>
+              <saveAssertionResultsFailureMessage>true</saveAssertionResultsFailureMessage>
+              <assertionsResultsToSave>0</assertionsResultsToSave>
+              <bytes>true</bytes>
+              <sentBytes>true</sentBytes>
+              <threadCounts>true</threadCounts>
+              <idleTime>true</idleTime>
+              <connectTime>true</connectTime>
+            </value>
+          </objProp>
+          <stringProp name="filename">${__P(resultsFile,tests/jmeter/results/results.jtl)}</stringProp>
+        </ResultCollector>
+        <hashTree/>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

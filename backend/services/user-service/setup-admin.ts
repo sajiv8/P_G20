@@ -66,7 +66,7 @@ async function main() {
 
   console.log('\n=== STEP 3: Create admin Firebase user ===\n');
 
-  const email = 'admin@campusrso.local';
+  const email = 'sumalkm48@gmail.com';
   const password = 'admin123';
 
   const adminUser = await adminAuth.createUser({

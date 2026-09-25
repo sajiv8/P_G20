@@ -6,7 +6,7 @@
 # Dependencies
 # ----------------------------------------------------------------------------
 node_modules/
-package-lock.json
+
 
 # ----------------------------------------------------------------------------
 # Build Output
@@ -60,7 +60,13 @@ API_ENDPOINTS_TESTING.md
 # ----------------------------------------------------------------------------
 # Tests, E2E & Mock Files
 # ----------------------------------------------------------------------------
-tests/
+# NOTE: tests/ is intentionally NOT ignored — the Postman collection is a
+# deliverable and CI cannot run what is not committed. Credentials live in
+# tests/postman/campus-rso.postman_environment.json, ignored further down.
+#
+# The scripts below stay ignored because they contain hardcoded Firebase API
+# keys and passwords. Move those values to environment variables, then commit
+# the scripts.
 e2e-puppeteer.mjs
 backend/scripts/e2e-test.ts
 backend/scripts/test-firebase-claims.ts
@@ -144,3 +150,22 @@ temp/
 docker-compose.override.yml
 backend/docs/
 
+
+# Postman environment with real credentials (copy from the .example file)
+tests/postman/campus-rso.postman_environment.json
+tests/postman/newman-report.html
+
+# Cypress — credentials and run artifacts
+cypress.env.json
+tests/cypress/screenshots/
+tests/cypress/videos/
+tests/cypress/downloads/
+
+# JMeter run artifacts
+tests/jmeter/results/
+
+# ZAP scan reports
+tests/security/reports/
+
+# Real SUS responses (keep participant data out of git)
+tests/usability/responses.csv

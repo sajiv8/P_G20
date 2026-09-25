@@ -2,24 +2,10 @@
  * Booking & Optimization Service — Entry Point
  */
 
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import { logger, errorHandler } from '@rso/shared';
-import { bookingRoutes } from './routes';
+import { logger } from '@rso/shared';
+import { buildServer } from './server';
 
-const server = Fastify({ logger: false, ignoreTrailingSlash: true });
-
-server.register(cors, { origin: true });
-server.setErrorHandler(errorHandler);
-
-server.get('/health', async () => ({
-  status: 'ok',
-  service: 'booking-service',
-  timestamp: new Date().toISOString(),
-  uptime: process.uptime(),
-}));
-
-server.register(bookingRoutes);
+const server = buildServer();
 
 const start = async () => {
   try {
@@ -33,4 +19,3 @@ const start = async () => {
 };
 
 start();
-

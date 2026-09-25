@@ -325,6 +325,41 @@ async function handleBookingEvent(event: StreamEvent): Promise<void> {
       return;
     }
 
+    case 'booking.bumped': {
+      // The owner lost this slot to someone with higher priority and did not
+      // choose to. Say so plainly, and confirm the refund.
+      const uid = await getBookingOwner(payload.booking_id as string);
+      if (!uid) return;
+
+      const refunded = Number(payload.tokens_refunded) || 0;
+      const refundLine = refunded > 0
+        ? `All ${refunded} tokens have been returned to your balance.`
+        : 'No tokens were charged for this booking.';
+
+      const userEmail = await getUserEmail(uid);
+      const html = buildEmailHtml({
+        title: 'Your booking was replaced',
+        body:
+          'A user with higher booking priority has taken this time slot. ' +
+          `Your booking has been cancelled. ${refundLine} You can book another slot at any time.`,
+        details: [
+          { label: 'Booking ID', value: (payload.booking_id as string).slice(0, 8) },
+          { label: 'Tokens returned', value: String(refunded) },
+        ],
+      });
+
+      await createNotification(
+        tenantId,
+        uid,
+        'booking_bumped',
+        'Your booking was replaced',
+        `A higher-priority user has taken this slot. ${refundLine}`,
+        payload,
+      );
+      if (userEmail) await sendEmail(userEmail, 'Your booking was replaced — CampusRSO', html);
+      return;
+    }
+
     case 'booking.updated': {
       const uid = await getBookingOwner(payload.booking_id as string);
       if (!uid) return;
@@ -431,33 +466,6 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
     }
 
     // ── User Events ───────────────────────────────────────────────────────
-    case 'user.email_verification_requested': {
-      const email = payload.email as string;
-      const link = payload.link as string;
-      if (email && link) {
-        const html = buildEmailHtml({
-          title: 'Verify your email address',
-          greeting: `Hello,`,
-          body: 'Welcome to the Campus Resource Management Platform. Please verify your email address to activate your account.<br/><br/><a href="' + link + '" style="background-color: #6366f1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Verify Email</a><br/><br/>This link was generated securely through Firebase Authentication. If you did not create this account, you can ignore this email.',
-        });
-        await sendEmail(email, 'Verify your email address — CampusRSO', html);
-      }
-      return;
-    }
-
-    case 'user.password_reset_requested': {
-      const email = payload.email as string;
-      const link = payload.link as string;
-      if (email && link) {
-        const html = buildEmailHtml({
-          title: 'Password Reset',
-          greeting: `Hello,`,
-          body: 'We received a request to reset your password. Click the link below to set a new password.<br/><br/><a href="' + link + '" style="background-color: #6366f1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">Reset Password</a><br/><br/>This link was generated securely through Firebase Authentication. If you did not request a password reset, please ignore this email.',
-        });
-        await sendEmail(email, 'Password Reset — CampusRSO', html);
-      }
-      return;
-    }
 
     case 'user.signup': {
       const email = payload.email as string;

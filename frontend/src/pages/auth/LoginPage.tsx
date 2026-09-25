@@ -18,8 +18,8 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Support username login: 'admin' → admin@campusrso.local
-      const loginEmail = email.includes('@') ? email : `${email}@campusrso.local`;
+      // Support username login: 'admin' → sumalkm48@gmail.com
+      const loginEmail = email.includes('@') ? email : email === 'admin' ? 'sumalkm48@gmail.com' : `${email}@campusrso.local`;
       await login(loginEmail, password);
 
       // Check if user is verified before allowing dashboard access
@@ -85,9 +85,11 @@ export function LoginPage() {
                 required
                 style={{ paddingLeft: 40, paddingRight: 40 }}
               />
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
                 style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', padding: 0 }}
               >
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
