@@ -423,7 +423,10 @@ describe('PUT /api/v1/bookings/:id/approve', () => {
   // TC-BOOK-17
   it('lets a tenant admin approve a pending booking', async () => {
     signInAs(TENANT_ADMIN);
-    supabase.queueResults({ data: { id: 'booking-1', status: 'approved', tenant_id: 'tenant-a' } });
+    supabase.queueResults(
+      { data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-a' } },
+      { data: { id: 'booking-1', status: 'approved', tenant_id: 'tenant-a' } }
+    );
 
     const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
 
