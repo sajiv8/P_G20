@@ -5,6 +5,7 @@ import { AppLayout } from './layouts/AppLayout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { SignupPage } from './pages/auth/SignupPage';
 import { ForgotPasswordPage } from './pages/auth/ForgotPasswordPage';
+import { VerifyEmailPage } from './pages/auth/VerifyEmailPage';
 import { DashboardPage } from './pages/dashboard/DashboardPage';
 import { ResourceListPage } from './pages/resources/ResourceListPage';
 import { NewResourcePage } from './pages/resources/NewResourcePage';
@@ -81,6 +82,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+  if (!user.emailVerified) return <Navigate to="/verify-email" replace />;
   if (claims.is_banned) return <SuspendedScreen />;
   return <>{children}</>;
 }
@@ -88,7 +90,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (user) return <Navigate to="/" replace />;
+  // Only redirect to dashboard if user is authenticated AND verified
+  if (user && user.emailVerified) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -99,6 +102,9 @@ function AppRoutes() {
       <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
       <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+
+      {/* Verification route — requires authenticated but allows unverified */}
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       {/* Protected routes */}
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
