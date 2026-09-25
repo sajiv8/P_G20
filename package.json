@@ -29,7 +29,10 @@
     "test:a11y": "env -u ELECTRON_RUN_AS_NODE cypress run --spec tests/cypress/e2e/04-accessibility.cy.ts",
     "test:load": "node tests/jmeter/run.mjs",
     "test:load:smoke": "node tests/jmeter/run.mjs --smoke",
-    "test:security": "bash tests/security/zap-scan.sh"
+    "test:security": "bash tests/security/zap-scan.sh",
+    "test:matrix": "node tests/traceability/build-matrix.mjs",
+    "test:matrix:md": "node tests/traceability/build-matrix.mjs --md",
+    "test:sus": "node tests/usability/sus-score.mjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.108.2",

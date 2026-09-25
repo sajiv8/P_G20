@@ -283,6 +283,55 @@ describe('POST /api/v1/bookings — priority and conflicts', () => {
     expect(supabase.findCall('bookings', 'insert')).toBeUndefined();
   });
 
+  // TC-TOK-07 / D-02 regression: a displaced student must get their tokens back.
+  it('refunds the full charge to a student it bumps', async () => {
+    signInAs(LECTURER);
+    supabase.queueResults(
+      { data: equipment({ hourly_cost: 10 }) },
+      { data: [{ id: 'booking-0', booked_by: 'student-9' }] },
+      { data: [{ firebase_uid: 'student-9', role: 'student' }] },
+      { data: null }, // bump update
+      { data: { id: 'booking-9', status: 'approved' } }, // insert
+      { data: { id: 'balance-9', balance: 50 } }, // displaced student's balance
+      { data: { amount: -20 } }, // their original deduction
+      { data: [] }, // no prior refund
+      { data: null }, // balance update
+      { data: null }, // refund transaction
+    );
+
+    const res = await postBooking(validBooking());
+
+    expect(res.statusCode).toBe(201);
+    // The whole 20 comes back, not half: 50 + 20 = 70.
+    expect(supabase.findCall('student_token_balances', 'update')?.payload).toEqual({ balance: 70 });
+    expect(supabase.findCall('token_transactions', 'insert')?.payload).toMatchObject({
+      firebase_uid: 'student-9',
+      booking_id: 'booking-0',
+      amount: 20,
+      type: 'booking_refund',
+    });
+  });
+
+  it('does not refund a bumped booking twice', async () => {
+    signInAs(LECTURER);
+    supabase.queueResults(
+      { data: equipment({ hourly_cost: 10 }) },
+      { data: [{ id: 'booking-0', booked_by: 'student-9' }] },
+      { data: [{ firebase_uid: 'student-9', role: 'student' }] },
+      { data: null },
+      { data: { id: 'booking-9', status: 'approved' } },
+      { data: { id: 'balance-9', balance: 50 } },
+      { data: { amount: -20 } },
+      { data: [{ id: 'refund-1' }] }, // a refund already exists
+    );
+
+    const res = await postBooking(validBooking());
+
+    expect(res.statusCode).toBe(201);
+    expect(supabase.findCall('student_token_balances', 'update')).toBeUndefined();
+    expect(supabase.findCall('token_transactions', 'insert')).toBeUndefined();
+  });
+
   it('treats an overlap whose profile is missing as a student', async () => {
     signInAs(STUDENT);
     supabase.queueResults(

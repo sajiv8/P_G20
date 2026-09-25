@@ -1,0 +1,7 @@
+# SUS responses — one row per participant, answers 1 (strongly disagree) to 5 (strongly agree).
+# Copy this file to responses.csv and replace the example rows with your real sessions.
+# The rows below are ILLUSTRATIVE ONLY. Delete them before reporting anything.
+participant,role,q1,q2,q3,q4,q5,q6,q7,q8,q9,q10
+P01,student,4,2,4,2,4,2,4,2,4,2
+P02,student,5,1,5,1,4,2,5,1,5,2
+P03,lecturer,3,3,4,2,3,3,4,2,3,3

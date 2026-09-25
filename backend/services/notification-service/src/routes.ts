@@ -325,6 +325,41 @@ async function handleBookingEvent(event: StreamEvent): Promise<void> {
       return;
     }
 
+    case 'booking.bumped': {
+      // The owner lost this slot to someone with higher priority and did not
+      // choose to. Say so plainly, and confirm the refund.
+      const uid = await getBookingOwner(payload.booking_id as string);
+      if (!uid) return;
+
+      const refunded = Number(payload.tokens_refunded) || 0;
+      const refundLine = refunded > 0
+        ? `All ${refunded} tokens have been returned to your balance.`
+        : 'No tokens were charged for this booking.';
+
+      const userEmail = await getUserEmail(uid);
+      const html = buildEmailHtml({
+        title: 'Your booking was replaced',
+        body:
+          'A user with higher booking priority has taken this time slot. ' +
+          `Your booking has been cancelled. ${refundLine} You can book another slot at any time.`,
+        details: [
+          { label: 'Booking ID', value: (payload.booking_id as string).slice(0, 8) },
+          { label: 'Tokens returned', value: String(refunded) },
+        ],
+      });
+
+      await createNotification(
+        tenantId,
+        uid,
+        'booking_bumped',
+        'Your booking was replaced',
+        `A higher-priority user has taken this slot. ${refundLine}`,
+        payload,
+      );
+      if (userEmail) await sendEmail(userEmail, 'Your booking was replaced — CampusRSO', html);
+      return;
+    }
+
     case 'booking.updated': {
       const uid = await getBookingOwner(payload.booking_id as string);
       if (!uid) return;

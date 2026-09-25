@@ -24,10 +24,78 @@ import {
   billableHours,
   calculateBookingCost,
   calculateRefund,
+  calculateBumpRefund,
 } from './booking-rules';
 
 export async function bookingRoutes(server: FastifyInstance): Promise<void> {
   const supabase = getSupabaseClient();
+
+  /**
+   * Return tokens for a booking that is no longer going ahead.
+   *
+   * A cancellation keeps half; a bump returns everything, because the student
+   * did not choose to lose the slot. Returns the number of tokens returned,
+   * or 0 when there is nothing to refund.
+   */
+  async function refundBookingTokens(
+    bookingId: string,
+    bookedBy: string,
+    kind: 'cancel' | 'bump',
+  ): Promise<number> {
+    if (!bookedBy) return 0;
+
+    const { data: tokenBalance } = await supabase
+      .from('student_token_balances')
+      .select('id, balance')
+      .eq('firebase_uid', bookedBy)
+      .single();
+
+    if (!tokenBalance) return 0; // not a student, or no balance record
+
+    const { data: deduction } = await supabase
+      .from('token_transactions')
+      .select('amount')
+      .eq('booking_id', bookingId)
+      .eq('type', 'booking_deduction')
+      .single();
+
+    if (!deduction) return 0; // the booking was free
+
+    // Never refund the same booking twice — a booking can be bumped and then
+    // cancelled, and both paths land here.
+    const { data: priorRefunds } = await supabase
+      .from('token_transactions')
+      .select('id')
+      .eq('booking_id', bookingId)
+      .eq('type', 'booking_refund');
+
+    if (priorRefunds && priorRefunds.length > 0) return 0;
+
+    const amount = kind === 'bump'
+      ? calculateBumpRefund(deduction.amount)
+      : calculateRefund(deduction.amount);
+
+    if (amount <= 0) return 0;
+
+    await supabase
+      .from('student_token_balances')
+      .update({ balance: tokenBalance.balance + amount })
+      .eq('id', tokenBalance.id);
+
+    // The schema constrains `type` to four values, so a bump reuses
+    // booking_refund and is distinguished by its description.
+    await supabase.from('token_transactions').insert({
+      firebase_uid: bookedBy,
+      booking_id: bookingId,
+      amount,
+      type: 'booking_refund',
+      description: kind === 'bump'
+        ? `Full refund — booking displaced by a higher-priority user (${amount} tokens)`
+        : `50% refund for cancelled booking (${amount} of ${Math.abs(deduction.amount)} tokens)`,
+    });
+
+    return amount;
+  }
 
   // ========================================================================
   // GET /api/v1/bookings — List bookings (tenant-scoped, filterable)
@@ -193,8 +261,15 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       throw ApiError.conflict('This time slot is already booked by a user with equal or higher priority.');
     }
 
+    // Keep the owners, so the displaced students can be refunded and told once
+    // the replacement booking is confirmed.
+    const bumped = (overlaps || [])
+      .filter(o => decision.bumpedIds.includes(o.id))
+      .map(o => ({ id: o.id as string, bookedBy: o.booked_by as string }));
+
     if (decision.bumpedIds.length > 0) {
-      // Bump lower priority bookings
+      // Bump lower priority bookings. This has to happen before the insert, or
+      // the exclusion constraint rejects the new booking.
       await supabase
         .from('bookings')
         .update({ status: 'bumped' })
@@ -229,6 +304,36 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
         throw ApiError.conflict('This time slot was just booked by another user');
       }
       throw error;
+    }
+
+    // ---- Refund and notify anyone displaced (D-02) ----
+    // Only once the replacement booking exists: refunding before the insert
+    // would hand tokens back for a bump that never actually happened.
+    for (const displaced of bumped) {
+      try {
+        const refunded = await refundBookingTokens(displaced.id, displaced.bookedBy, 'bump');
+
+        await publishEvent('booking-events', {
+          type: 'booking.bumped',
+          payload: {
+            booking_id: displaced.id,
+            displaced_by: user.sub,
+            replacement_booking_id: booking.id,
+            tokens_refunded: refunded,
+          },
+          timestamp: new Date().toISOString(),
+          tenantId: resource.tenant_id,
+        });
+
+        logger.info(
+          { bookingId: displaced.id, refunded, by: user.sub },
+          'Booking bumped, owner refunded',
+        );
+      } catch (err) {
+        // A failed refund must not fail the booking that triggered it, but it
+        // leaves a student out of pocket — so log it loudly.
+        logger.error({ err, bookingId: displaced.id }, 'Failed to refund a bumped booking');
+      }
     }
 
     // ---- Student Token Deduction ----
@@ -433,43 +538,9 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
     if (error || !data) throw ApiError.notFound('Active booking');
 
     // ---- Student Token Refund (50%) ----
-    if (data.booked_by) {
-      // Check if the booker is a student with a token record
-      const { data: tokenBalance } = await supabase
-        .from('student_token_balances')
-        .select('id, balance')
-        .eq('firebase_uid', data.booked_by)
-        .single();
-
-      if (tokenBalance) {
-        // Find the original deduction for this booking
-        const { data: deduction } = await supabase
-          .from('token_transactions')
-          .select('amount')
-          .eq('booking_id', id)
-          .eq('type', 'booking_deduction')
-          .single();
-
-        if (deduction) {
-          const refundAmount = calculateRefund(deduction.amount);
-          if (refundAmount > 0) {
-            await supabase
-              .from('student_token_balances')
-              .update({ balance: tokenBalance.balance + refundAmount })
-              .eq('id', tokenBalance.id);
-
-            await supabase.from('token_transactions').insert({
-              firebase_uid: data.booked_by,
-              booking_id: id,
-              amount: refundAmount,
-              type: 'booking_refund',
-              description: `50% refund for cancelled booking (${refundAmount} of ${Math.abs(deduction.amount)} tokens)`,
-            });
-
-            logger.info({ bookingId: id, refund: refundAmount }, 'Student tokens partially refunded');
-          }
-        }
-      }
+    const refunded = await refundBookingTokens(id, data.booked_by, 'cancel');
+    if (refunded > 0) {
+      logger.info({ bookingId: id, refund: refunded }, 'Student tokens partially refunded');
     }
 
     try {
