@@ -142,12 +142,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & Push Frontend image
-        if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
           context: .
           file: frontend/Dockerfile
-          push: true
+          push: ${{ github.event_name == 'push' }}
           tags: |
             ${{ env.IMAGE_PREFIX }}-frontend:latest
             ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
@@ -183,12 +182,11 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & Push ${{ matrix.service }}
-        if: github.event_name == 'push'
         uses: docker/build-push-action@v6
         with:
           context: .
           file: backend/services/${{ matrix.service }}/Dockerfile
-          push: true
+          push: ${{ github.event_name == 'push' }}
           tags: |
             ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:latest
             ${{ env.IMAGE_PREFIX }}-${{ matrix.service }}:${{ github.sha }}
