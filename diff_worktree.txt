@@ -1,0 +1,116 @@
+﻿diff --git a/backend/services/user-service/src/routes.ts b/backend/services/user-service/src/routes.ts
+index 806e674..367c6d4 100644
+--- a/backend/services/user-service/src/routes.ts
++++ b/backend/services/user-service/src/routes.ts
+@@ -196,111 +196,7 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
+       throw ApiError.internal('Failed to generate verification link.');
+     }
+ 
+-<<<<<<< Updated upstream
+     sendSuccess(reply, { message: 'Verification email sent.' });
+-=======
+-<<<<<<< HEAD
+-    // Generate 6-digit OTP
+-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+-
+-    // Store in Redis with 10 min TTL
+-    await redis.set(otpKey, otp, 'EX', 600);
+-
+-    // Send email via Resend
+-    const apiKey = process.env.RESEND_API_KEY;
+-    const from = process.env.NOTIFICATION_FROM_EMAIL || 'onboarding@resend.dev';
+-
+-    if (apiKey) {
+-      try {
+-        await fetch('https://api.resend.com/emails', {
+-          method: 'POST',
+-          headers: {
+-            'Content-Type': 'application/json',
+-            'Authorization': `Bearer ${apiKey}`,
+-          },
+-          body: JSON.stringify({
+-            from,
+-            to: email,
+-            subject: 'CampusRSO ΓÇö Email Verification Code',
+-            html: `
+-              <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+-                <div style="text-align: center; margin-bottom: 24px;">
+-                  <h1 style="color: #6366f1; margin: 0;">CampusRSO</h1>
+-                  <p style="color: #6b7280; margin-top: 4px;">Campus Resource Sharing Platform</p>
+-                </div>
+-                <div style="background: #f9fafb; border-radius: 12px; padding: 32px; text-align: center;">
+-                  <p style="color: #374151; font-size: 16px; margin-bottom: 16px;">Your verification code is:</p>
+-                  <div style="font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #6366f1; background: white; border-radius: 8px; padding: 16px; border: 2px dashed #c7d2fe;">
+-                    ${otp}
+-                  </div>
+-                  <p style="color: #9ca3af; font-size: 13px; margin-top: 16px;">This code expires in 10 minutes.</p>
+-                </div>
+-                <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">If you didn't request this, please ignore this email.</p>
+-              </div>
+-            `,
+-          }),
+-        });
+-        logger.info({ email }, 'Verification OTP sent');
+-      } catch (err) {
+-        logger.error({ err, email }, 'Failed to send verification email');
+-        throw ApiError.internal('Failed to send verification email. Please try again.');
+-      }
+-    } else {
+-      logger.warn({ email, otp }, 'RESEND_API_KEY not set ΓÇö OTP logged for dev');
+-    }
+-
+-    sendSuccess(reply, { message: 'Verification code sent to your email', email });
+-  });
+-
+-  // ========================================================================
+-  // POST /api/v1/users/verify-email ΓÇö Validate OTP before signup
+-  // ========================================================================
+-  server.post('/api/v1/users/verify-email', async (request, reply) => {
+-    const { email, code } = request.body as { email: string; code: string };
+-
+-    if (!email || !code) {
+-      throw ApiError.badRequest('Email and verification code are required');
+-    }
+-
+-    const redis = getRedisClient();
+-    const otpKey = `email-verify:${email}`;
+-    const attemptsKey = `email-verify-attempts:${email}`;
+-    const storedOtp = await redis.get(otpKey);
+-
+-    if (!storedOtp) {
+-      throw ApiError.badRequest('Verification code has expired. Please request a new one.');
+-    }
+-
+-    // Sending is rate limited, but without a cap on guesses a six-digit code is
+-    // brute-forceable inside its ten-minute window. Burn the code once the
+-    // allowance is spent so an attacker cannot keep trying against it.
+-    const attempts = await redis.incr(attemptsKey);
+-    if (attempts === 1) await redis.expire(attemptsKey, 600);
+-
+-    if (attempts > MAX_OTP_ATTEMPTS) {
+-      await redis.del(otpKey);
+-      logger.warn({ email, attempts }, 'Email verification code burned after too many attempts');
+-      throw ApiError.tooManyRequests('Too many incorrect codes. Please request a new one.');
+-    }
+-
+-    if (storedOtp !== code.trim()) {
+-      const remaining = MAX_OTP_ATTEMPTS - attempts;
+-      throw ApiError.badRequest(
+-        `Invalid verification code. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining.`,
+-      );
+-    }
+-
+-    // OTP is valid ΓÇö mark as verified in Redis (for signup to check)
+-    await redis.set(`email-verified:${email}`, 'true', 'EX', 1800); // 30 min to complete signup
+-    await redis.del(otpKey); // Remove used OTP
+-    await redis.del(attemptsKey);
+-
+-    logger.info({ email }, 'Email verified via OTP');
+-    sendSuccess(reply, { verified: true, message: 'Email verified successfully' });
+-=======
+-    sendSuccess(reply, { message: 'Verification email sent.' });
+->>>>>>> a2a7980df63da4bd4f6145a1c12f9f2cdecec7d6
+->>>>>>> Stashed changes
+   });
+ 
+   // ========================================================================
