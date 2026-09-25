@@ -92,3 +92,14 @@ export function calculateBookingCost(
 export function calculateRefund(originalAmount: number): number {
   return Math.floor(Math.abs(originalAmount) / 2);
 }
+
+/**
+ * Refund for a booking displaced by a higher-priority user.
+ *
+ * The whole charge comes back, unlike the half kept on a cancellation: the
+ * student did not choose to give up the slot, so charging them for it would
+ * penalise them for someone else's booking.
+ */
+export function calculateBumpRefund(originalAmount: number): number {
+  return Math.abs(originalAmount);
+}

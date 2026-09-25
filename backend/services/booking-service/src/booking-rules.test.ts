@@ -6,6 +6,7 @@ import {
   billableHours,
   calculateBookingCost,
   calculateRefund,
+  calculateBumpRefund,
 } from './booking-rules';
 
 describe('priorityOf', () => {
@@ -200,5 +201,23 @@ describe('calculateRefund', () => {
 
   it('refunds nothing for a free booking', () => {
     expect(calculateRefund(0)).toBe(0);
+  });
+});
+
+describe('calculateBumpRefund', () => {
+  // TC-TOK-07 — a displaced student did not choose to lose the slot.
+  it('returns the whole charge, not half', () => {
+    expect(calculateBumpRefund(-20)).toBe(20);
+    expect(calculateBumpRefund(-21)).toBe(21);
+  });
+
+  it('is never less than a cancellation refund for the same charge', () => {
+    for (const amount of [1, 2, 7, 20, 21, 100]) {
+      expect(calculateBumpRefund(-amount)).toBeGreaterThanOrEqual(calculateRefund(-amount));
+    }
+  });
+
+  it('refunds nothing for a free booking', () => {
+    expect(calculateBumpRefund(0)).toBe(0);
   });
 });
