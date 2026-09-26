@@ -26,9 +26,22 @@ const ID_PATTERN = /TC-[A-Z0-9]+-\d+/g;
 // ---------------------------------------------------------------------------
 // Where each suite lives. A case is "covered" if its ID appears in one of these.
 // ---------------------------------------------------------------------------
+// Service test files are discovered rather than listed, so adding tests to a
+// new service counts automatically instead of silently going unnoticed.
+const SERVICES_ROOT = 'backend/services';
+
+function serviceTestDirs() {
+  const abs = resolve(repoRoot, SERVICES_ROOT);
+  if (!existsSync(abs)) return [];
+  return readdirSync(abs)
+    .map(service => join(SERVICES_ROOT, service, 'src'))
+    .filter(dir => existsSync(resolve(repoRoot, dir)));
+}
+
 const SUITES = [
-  { name: 'Jest unit', level: 'L1', paths: ['backend/services/booking-service/src/booking-rules.test.ts'] },
-  { name: 'Jest integration', level: 'L2', paths: ['backend/services/booking-service/src/routes.integration.test.ts'] },
+  // testOnly: a TC-ID mentioned in production source must not count as
+  // coverage — only an actual test file does.
+  { name: 'Jest (services)', level: 'L1/L2', paths: serviceTestDirs(), testOnly: true },
   { name: 'Newman API', level: 'L3', paths: ['tests/postman/campus-rso.postman_collection.json'] },
   { name: 'Cypress GUI', level: 'L4', paths: ['tests/cypress/e2e'] },
   { name: 'Selenium', level: 'L5', paths: ['tests/selenium'] },
@@ -42,10 +55,11 @@ function filesUnder(target) {
   return readdirSync(abs).flatMap(entry => filesUnder(join(target, entry)));
 }
 
-function idsIn(paths) {
+function idsIn(paths, testOnly = false) {
   const found = new Set();
   for (const path of paths) {
     for (const file of filesUnder(path)) {
+      if (testOnly && !/\.(test|spec)\.[cm]?[jt]s$/.test(file)) continue;
       const text = readFileSync(file, 'utf8');
       for (const id of text.match(ID_PATTERN) || []) found.add(id);
     }
@@ -61,7 +75,7 @@ const coverage = new Map(); // id -> [suite names]
 const orphans = new Set(); // ids referenced by a test but absent from the catalogue
 
 for (const suite of SUITES) {
-  for (const id of idsIn(suite.paths)) {
+  for (const id of idsIn(suite.paths, suite.testOnly)) {
     if (!byId.has(id)) {
       orphans.add(`${id} (${suite.name})`);
       continue;
