@@ -625,34 +625,6 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
       return;
     }
 
-    case 'user.email_verification_requested': {
-      const email = payload.email as string;
-      const link = payload.link as string;
-
-      const html = buildEmailHtml({
-        title: 'Verify Your Email',
-        body: `Please verify your email address to continue setting up your account.`,
-        ctaText: 'Verify Email',
-        ctaUrl: link,
-      });
-      await sendEmailDirect({ to: email, subject: 'CampusRSO — Verify your email', html });
-      return;
-    }
-
-    case 'user.password_reset_requested': {
-      const email = payload.email as string;
-      const link = payload.link as string;
-
-      const html = buildEmailHtml({
-        title: 'Reset Your Password',
-        body: `We received a request to reset your password. Click the button below to choose a new one.`,
-        ctaText: 'Reset Password',
-        ctaUrl: link,
-      });
-      await sendEmailDirect({ to: email, subject: 'CampusRSO — Password Reset', html });
-      return;
-    }
-
     default:
       logger.debug({ type }, 'Unknown system event type — skipping');
   }
