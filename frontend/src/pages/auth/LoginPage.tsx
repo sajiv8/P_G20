@@ -18,8 +18,8 @@ export function LoginPage() {
     e.preventDefault();
     setLoading(true);
     try {
-      // Support username login: 'admin' → admin@campusrso.local
-      const loginEmail = email.includes('@') ? email : `${email}@campusrso.local`;
+      // Support username login: 'admin' → sumalkm48@gmail.com
+      const loginEmail = email.includes('@') ? email : email === 'admin' ? 'sumalkm48@gmail.com' : `${email}@campusrso.local`;
       await login(loginEmail, password);
 
       // Check if user is verified before allowing dashboard access

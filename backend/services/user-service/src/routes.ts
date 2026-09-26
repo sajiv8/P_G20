@@ -604,10 +604,8 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
 
     // Sync Firebase custom claims
     if (tenant_id !== undefined) {
-      const { setUserClaims } = await import('./firebase-claims');
       await setUserClaims(uid, data.tenant_id, role as any);
     } else {
-      const { updateUserRole } = await import('./firebase-claims');
       await updateUserRole(uid, role as any);
     }
 
