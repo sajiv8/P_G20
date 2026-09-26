@@ -112,6 +112,29 @@ describe('POST /api/v1/bookings — access and validation', () => {
     expect(supabase.calls).toHaveLength(0);
   });
 
+  // TC-BOOK-12 / D-04 — rejected before any database call is made.
+  it('rejects a booking whose end is before its start', async () => {
+    signInAs(STUDENT);
+
+    const res = await postBooking(validBooking({
+      start_time: '2027-03-01T12:00:00.000Z',
+      end_time: '2027-03-01T10:00:00.000Z',
+    }));
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/after start_time/);
+    expect(supabase.calls).toHaveLength(0);
+  });
+
+  it('rejects a booking with an unparseable date', async () => {
+    signInAs(STUDENT);
+
+    const res = await postBooking(validBooking({ end_time: 'next tuesday' }));
+
+    expect(res.statusCode).toBe(400);
+    expect(supabase.calls).toHaveLength(0);
+  });
+
   it('returns 404 when the resource does not exist', async () => {
     signInAs(STUDENT);
     supabase.queueResults({ data: null });

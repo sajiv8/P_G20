@@ -25,6 +25,7 @@ import {
   calculateBookingCost,
   calculateRefund,
   calculateBumpRefund,
+  validateBookingWindow,
 } from './booking-rules';
 
 export async function bookingRoutes(server: FastifyInstance): Promise<void> {
@@ -186,6 +187,9 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
     if (!body.resource_id || !body.start_time || !body.end_time || !body.title) {
       throw ApiError.badRequest('resource_id, title, start_time, and end_time are required');
     }
+
+    const windowProblem = validateBookingWindow(body.start_time, body.end_time);
+    if (windowProblem) throw ApiError.badRequest(windowProblem);
 
     // Verify resource exists and belongs to user's tenant (or is global)
     const { data: resource } = await supabase
@@ -585,13 +589,21 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       }
     }
 
+    const nextStart = updates.start_time !== undefined ? updates.start_time : existing.start_time;
+    const nextEnd = updates.end_time !== undefined ? updates.end_time : existing.end_time;
+
+    // Either field can be edited on its own, so validate the resulting window
+    // rather than only what was sent (D-04).
+    const windowProblem = validateBookingWindow(nextStart, nextEnd);
+    if (windowProblem) throw ApiError.badRequest(windowProblem);
+
     const { data, error } = await supabase
       .from('bookings')
       .update({
         title: updates.title !== undefined ? updates.title : existing.title,
         purpose: updates.purpose !== undefined ? updates.purpose : existing.purpose,
-        start_time: updates.start_time !== undefined ? updates.start_time : existing.start_time,
-        end_time: updates.end_time !== undefined ? updates.end_time : existing.end_time,
+        start_time: nextStart,
+        end_time: nextEnd,
         notes: updates.notes !== undefined ? updates.notes : existing.notes,
       })
       .eq('id', id)

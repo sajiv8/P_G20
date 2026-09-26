@@ -7,7 +7,7 @@
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { logger, errorHandler } from '@rso/shared';
+import { logger, errorHandler, getAllowedOrigins } from '@rso/shared';
 import { tenantRoutes } from './routes';
 
 const server = Fastify({
@@ -16,7 +16,7 @@ const server = Fastify({
 });
 
 // Plugins
-server.register(cors, { origin: true });
+server.register(cors, { origin: getAllowedOrigins() });
 
 // Error handler
 server.setErrorHandler(errorHandler);

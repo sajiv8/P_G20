@@ -108,7 +108,10 @@ export async function authMiddleware(
         ? 'Malformed token'
         : 'Invalid or expired token';
 
-    logger.warn({ err: err.message, code: err.code, stack: err.stack, fullErr: err }, 'Token verification failed detailed');
+    // Only the message and Firebase error code. Dumping the whole error object
+    // (and its stack) on every failed auth risked writing token material into
+    // the logs, and made log noise out of a routine, expected event.
+    logger.warn({ err: err.message, code: err.code }, 'Token verification failed');
 
     reply.code(401).send({
       success: false,
