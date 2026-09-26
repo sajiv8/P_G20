@@ -421,9 +421,12 @@ describe('PUT /api/v1/bookings/:id/approve', () => {
   });
 
   // TC-BOOK-17
-  it('lets a tenant admin approve a pending booking', async () => {
+  it('lets a tenant admin approve a pending booking in their own faculty', async () => {
     signInAs(TENANT_ADMIN);
-    supabase.queueResults({ data: { id: 'booking-1', status: 'approved', tenant_id: 'tenant-a' } });
+    supabase.queueResults(
+      { data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-a' } }, // tenant-ownership fetch
+      { data: { id: 'booking-1', status: 'approved', tenant_id: 'tenant-a' } }, // update
+    );
 
     const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
 
@@ -437,11 +440,34 @@ describe('PUT /api/v1/bookings/:id/approve', () => {
   // TC-BOOK-18
   it('returns 404 when the booking is not pending', async () => {
     signInAs(TENANT_ADMIN);
-    supabase.queueResults({ data: null, error: { message: 'no rows' } });
+    supabase.queueResults({ data: null, error: { message: 'no rows' } }); // the fetch itself finds nothing
 
     const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
 
     expect(res.statusCode).toBe(404);
+  });
+
+  // TC-RBAC-04 — a tenant admin must not approve another faculty's booking.
+  it('stops a tenant admin approving a booking from another faculty', async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({ data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-b' } });
+
+    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+
+    expect(res.statusCode).toBe(403);
+    expect(supabase.findCall('bookings', 'update')).toBeUndefined();
+  });
+
+  it('lets main_admin approve a booking from any faculty', async () => {
+    signInAs({ ...TENANT_ADMIN, sub: 'super-1', appRole: 'main_admin', tenantId: null });
+    supabase.queueResults(
+      { data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-b' } },
+      { data: { id: 'booking-1', status: 'approved', tenant_id: 'tenant-b' } },
+    );
+
+    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+
+    expect(res.statusCode).toBe(200);
   });
 });
 
