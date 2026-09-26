@@ -1,188 +1,1324 @@
 {
   "$comment": "Authoritative catalogue of the test cases defined in the CampusRSO test plan. The traceability script cross-references this against the IDs actually referenced in the suites, so a case listed here with no matching test shows up as a coverage hole. 'automatable: false' means the case needs a human (screen reader, real users, visual judgement) and is expected to stay manual.",
   "requirements": [
-    { "id": "FR-01", "title": "Users join a faculty with a code and get a student role", "cases": ["TC-AUTH-01", "TC-AUTH-02", "TC-AUTH-03", "TC-AUTH-04"] },
-    { "id": "FR-02", "title": "Email must be verified before an account is created", "cases": ["TC-AUTH-05", "TC-AUTH-06", "TC-AUTH-07", "TC-AUTH-08", "TC-AUTH-09", "TC-AUTH-10"] },
-    { "id": "FR-03", "title": "Data is isolated between faculties", "cases": ["TC-RBAC-08", "TC-RBAC-09", "TC-RBAC-10", "TC-RBAC-11", "TC-RBAC-12", "TC-RBAC-13"] },
-    { "id": "FR-04", "title": "Higher-priority users bump lower-priority bookings", "cases": ["TC-BOOK-04", "TC-BOOK-05", "TC-BOOK-06"] },
-    { "id": "FR-05", "title": "The same slot can never be double-booked", "cases": ["TC-BOOK-07", "TC-BOOK-08", "TC-BOOK-09", "TC-BOOK-10", "TC-BOOK-11", "TC-PERF-02"] },
-    { "id": "FR-06", "title": "Students spend and recover tokens correctly", "cases": ["TC-TOK-01", "TC-TOK-02", "TC-TOK-03", "TC-TOK-04", "TC-TOK-05", "TC-TOK-06", "TC-TOK-07", "TC-TOK-08", "TC-TOK-09", "TC-TOK-10", "TC-TOK-11", "TC-TOK-12"] },
-    { "id": "FR-07", "title": "Students can share their own items", "cases": ["TC-ST-01", "TC-ST-02", "TC-ST-03", "TC-ST-04", "TC-ST-05", "TC-ST-06", "TC-ST-07", "TC-ST-08"] },
-    { "id": "FR-08", "title": "Users are notified in-app and by email", "cases": ["TC-NOT-01", "TC-NOT-02", "TC-NOT-03", "TC-NOT-04", "TC-NOT-05", "TC-NOT-06", "TC-NOT-07"] },
-    { "id": "NFR-01", "title": "p95 response time under 500 ms at 50 users", "cases": ["TC-PERF-01", "TC-PERF-06"] },
-    { "id": "NFR-02", "title": "WCAG 2.1 Level AA", "cases": ["TC-A11Y-01", "TC-A11Y-02", "TC-A11Y-03", "TC-A11Y-04", "TC-A11Y-05", "TC-A11Y-06", "TC-A11Y-07", "TC-A11Y-08", "TC-A11Y-09", "TC-A11Y-10"] },
-    { "id": "NFR-03", "title": "No High or Critical security findings", "cases": ["TC-SEC-01", "TC-SEC-02", "TC-SEC-03", "TC-SEC-04", "TC-SEC-05", "TC-SEC-06", "TC-SEC-07", "TC-SEC-08", "TC-SEC-09", "TC-SEC-10", "TC-SEC-11", "TC-SEC-12", "TC-SEC-13", "TC-SEC-14", "TC-SEC-15", "TC-SEC-16", "TC-SEC-17", "TC-SEC-18"] },
-    { "id": "NFR-04", "title": "SUS score of 68 or above", "cases": ["TC-USE-01", "TC-USE-02", "TC-USE-03", "TC-USE-04", "TC-USE-05", "TC-USE-06", "TC-USE-07"] },
-    { "id": "NFR-05", "title": "Failures are handled clearly and never silently", "cases": ["TC-ERR-01", "TC-ERR-02", "TC-ERR-03", "TC-ERR-04", "TC-ERR-05", "TC-ERR-06", "TC-ERR-07", "TC-ERR-08", "TC-ERR-09", "TC-ERR-10", "TC-ERR-11", "TC-ERR-12"] },
-    { "id": "NFR-06", "title": "The GUI works across browsers and screen sizes", "cases": ["TC-GUI-01", "TC-GUI-02", "TC-GUI-03", "TC-GUI-04", "TC-GUI-05", "TC-GUI-06", "TC-GUI-07", "TC-GUI-08", "TC-GUI-09", "TC-GUI-10", "TC-GUI-11", "TC-GUI-12", "TC-GUI-13", "TC-GUI-14", "TC-GUI-15"] }
+    {
+      "id": "FR-01",
+      "title": "Users join a faculty with a code and get a student role",
+      "cases": [
+        "TC-AUTH-01",
+        "TC-AUTH-02",
+        "TC-AUTH-03",
+        "TC-AUTH-04"
+      ]
+    },
+    {
+      "id": "FR-02",
+      "title": "Email must be verified before an account is created",
+      "cases": [
+        "TC-AUTH-05",
+        "TC-AUTH-06",
+        "TC-AUTH-07",
+        "TC-AUTH-08",
+        "TC-AUTH-09",
+        "TC-AUTH-10"
+      ]
+    },
+    {
+      "id": "FR-03",
+      "title": "Data is isolated between faculties",
+      "cases": [
+        "TC-RBAC-08",
+        "TC-RBAC-09",
+        "TC-RBAC-10",
+        "TC-RBAC-11",
+        "TC-RBAC-12",
+        "TC-RBAC-13"
+      ]
+    },
+    {
+      "id": "FR-04",
+      "title": "Higher-priority users bump lower-priority bookings",
+      "cases": [
+        "TC-BOOK-04",
+        "TC-BOOK-05",
+        "TC-BOOK-06"
+      ]
+    },
+    {
+      "id": "FR-05",
+      "title": "The same slot can never be double-booked",
+      "cases": [
+        "TC-BOOK-07",
+        "TC-BOOK-08",
+        "TC-BOOK-09",
+        "TC-BOOK-10",
+        "TC-BOOK-11",
+        "TC-PERF-02"
+      ]
+    },
+    {
+      "id": "FR-06",
+      "title": "Students spend and recover tokens correctly",
+      "cases": [
+        "TC-TOK-01",
+        "TC-TOK-02",
+        "TC-TOK-03",
+        "TC-TOK-04",
+        "TC-TOK-05",
+        "TC-TOK-06",
+        "TC-TOK-07",
+        "TC-TOK-08",
+        "TC-TOK-09",
+        "TC-TOK-10",
+        "TC-TOK-11",
+        "TC-TOK-12"
+      ]
+    },
+    {
+      "id": "FR-07",
+      "title": "Students can share their own items",
+      "cases": [
+        "TC-ST-01",
+        "TC-ST-02",
+        "TC-ST-03",
+        "TC-ST-04",
+        "TC-ST-05",
+        "TC-ST-06",
+        "TC-ST-07",
+        "TC-ST-08"
+      ]
+    },
+    {
+      "id": "FR-08",
+      "title": "Users are notified in-app and by email",
+      "cases": [
+        "TC-NOT-01",
+        "TC-NOT-02",
+        "TC-NOT-03",
+        "TC-NOT-04",
+        "TC-NOT-05",
+        "TC-NOT-06",
+        "TC-NOT-07"
+      ]
+    },
+    {
+      "id": "NFR-01",
+      "title": "p95 response time under 500 ms at 50 users",
+      "cases": [
+        "TC-PERF-01",
+        "TC-PERF-06"
+      ]
+    },
+    {
+      "id": "NFR-02",
+      "title": "WCAG 2.1 Level AA",
+      "cases": [
+        "TC-A11Y-01",
+        "TC-A11Y-02",
+        "TC-A11Y-03",
+        "TC-A11Y-04",
+        "TC-A11Y-05",
+        "TC-A11Y-06",
+        "TC-A11Y-07",
+        "TC-A11Y-08",
+        "TC-A11Y-09",
+        "TC-A11Y-10"
+      ]
+    },
+    {
+      "id": "NFR-03",
+      "title": "No High or Critical security findings",
+      "cases": [
+        "TC-SEC-01",
+        "TC-SEC-02",
+        "TC-SEC-03",
+        "TC-SEC-04",
+        "TC-SEC-05",
+        "TC-SEC-06",
+        "TC-SEC-07",
+        "TC-SEC-08",
+        "TC-SEC-09",
+        "TC-SEC-10",
+        "TC-SEC-11",
+        "TC-SEC-12",
+        "TC-SEC-13",
+        "TC-SEC-14",
+        "TC-SEC-15",
+        "TC-SEC-16",
+        "TC-SEC-17",
+        "TC-SEC-18"
+      ]
+    },
+    {
+      "id": "NFR-04",
+      "title": "SUS score of 68 or above",
+      "cases": [
+        "TC-USE-01",
+        "TC-USE-02",
+        "TC-USE-03",
+        "TC-USE-04",
+        "TC-USE-05",
+        "TC-USE-06",
+        "TC-USE-07"
+      ]
+    },
+    {
+      "id": "NFR-05",
+      "title": "Failures are handled clearly and never silently",
+      "cases": [
+        "TC-ERR-01",
+        "TC-ERR-02",
+        "TC-ERR-03",
+        "TC-ERR-04",
+        "TC-ERR-05",
+        "TC-ERR-06",
+        "TC-ERR-07",
+        "TC-ERR-08",
+        "TC-ERR-09",
+        "TC-ERR-10",
+        "TC-ERR-11",
+        "TC-ERR-12"
+      ]
+    },
+    {
+      "id": "NFR-06",
+      "title": "The GUI works across browsers and screen sizes",
+      "cases": [
+        "TC-GUI-01",
+        "TC-GUI-02",
+        "TC-GUI-03",
+        "TC-GUI-04",
+        "TC-GUI-05",
+        "TC-GUI-06",
+        "TC-GUI-07",
+        "TC-GUI-08",
+        "TC-GUI-09",
+        "TC-GUI-10",
+        "TC-GUI-11",
+        "TC-GUI-12",
+        "TC-GUI-13",
+        "TC-GUI-14",
+        "TC-GUI-15"
+      ]
+    }
   ],
   "cases": [
-    { "id": "TC-AUTH-01", "area": "Authentication", "title": "Sign up with a valid, active faculty code", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-02", "area": "Authentication", "title": "Sign up with a faculty code that does not exist", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-03", "area": "Authentication", "title": "Sign up with an inactive faculty", "priority": "Medium", "automatable": true },
-    { "id": "TC-AUTH-04", "area": "Authentication", "title": "Sign up twice with the same account", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-05", "area": "Authentication", "title": "Request an email OTP, then submit the correct code", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-06", "area": "Authentication", "title": "Submit an OTP after 10 minutes", "priority": "Medium", "automatable": true },
-    { "id": "TC-AUTH-07", "area": "Authentication", "title": "Submit a wrong OTP", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-08", "area": "Authentication", "title": "Request 6 OTPs within 10 minutes", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-09", "area": "Authentication", "title": "Guess OTPs 50 times in a row", "priority": "High", "automatable": true, "note": "Expected to expose defect D-03" },
-    { "id": "TC-AUTH-10", "area": "Authentication", "title": "Request verification for an already-registered email", "priority": "Medium", "automatable": true },
-    { "id": "TC-AUTH-11", "area": "Authentication", "title": "Forgot password with a mismatched member ID", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-12", "area": "Authentication", "title": "Reset password with a valid code", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-13", "area": "Authentication", "title": "Reset password with a 3-character password", "priority": "Medium", "automatable": true },
-    { "id": "TC-AUTH-14", "area": "Authentication", "title": "Protected endpoint with no Authorization header", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-15", "area": "Authentication", "title": "Malformed or expired token", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-16", "area": "Authentication", "title": "Banned user calls the API with an existing token", "priority": "High", "automatable": true },
-    { "id": "TC-AUTH-17", "area": "Authentication", "title": "Unban the user and refresh the token", "priority": "Medium", "automatable": true },
-
-    { "id": "TC-RBAC-01", "area": "Roles & tenancy", "title": "Student tries to create a resource", "priority": "High", "automatable": true },
-    { "id": "TC-RBAC-02", "area": "Roles & tenancy", "title": "Student tries to approve a booking", "priority": "High", "automatable": true },
-    { "id": "TC-RBAC-03", "area": "Roles & tenancy", "title": "Tenant admin tries to assign main_admin", "priority": "High", "automatable": true },
-    { "id": "TC-RBAC-04", "area": "Roles & tenancy", "title": "Tenant admin changes a role outside their faculty", "priority": "High", "automatable": true },
-    { "id": "TC-RBAC-05", "area": "Roles & tenancy", "title": "Tenant admin tries to ban a user", "priority": "High", "automatable": true },
-    { "id": "TC-RBAC-06", "area": "Roles & tenancy", "title": "Main admin tries to ban themselves", "priority": "Medium", "automatable": true },
-    { "id": "TC-RBAC-07", "area": "Roles & tenancy", "title": "Main admin tries to ban another main admin", "priority": "Medium", "automatable": true },
-    { "id": "TC-RBAC-08", "area": "Roles & tenancy", "title": "Faculty A user reads a Faculty B booking", "priority": "High", "automatable": true },
-    { "id": "TC-RBAC-09", "area": "Roles & tenancy", "title": "Faculty A user books a Faculty B resource", "priority": "High", "automatable": true },
-    { "id": "TC-RBAC-10", "area": "Roles & tenancy", "title": "User with no tenant lists bookings", "priority": "Medium", "automatable": true },
-    { "id": "TC-RBAC-11", "area": "Roles & tenancy", "title": "Student A reads Student B's profile", "priority": "High", "automatable": true },
-    { "id": "TC-RBAC-12", "area": "Roles & tenancy", "title": "Student self-updates with role=main_admin", "priority": "High", "automatable": true },
-    { "id": "TC-RBAC-13", "area": "Roles & tenancy", "title": "RLS blocks cross-faculty rows at the database", "priority": "High", "automatable": true, "method": "SQL" },
-    { "id": "TC-RBAC-14", "area": "Roles & tenancy", "title": "Role change syncs Firebase claims", "priority": "Medium", "automatable": true },
-
-    { "id": "TC-BOOK-01", "area": "Bookings", "title": "Student books a free equipment slot", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-02", "area": "Bookings", "title": "Lecturer booking is auto-approved", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-03", "area": "Bookings", "title": "Student cannot book a lecture hall", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-04", "area": "Bookings", "title": "Equal priority overlap is refused", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-05", "area": "Bookings", "title": "Lecturer bumps a student", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-06", "area": "Bookings", "title": "Student cannot take a lecturer's slot", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-07", "area": "Bookings", "title": "Overlap that fully contains an existing booking", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-08", "area": "Bookings", "title": "Overlap on the start edge", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-09", "area": "Bookings", "title": "Overlap on the end edge", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-10", "area": "Bookings", "title": "Adjacent slot is not an overlap", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-11", "area": "Bookings", "title": "Two identical concurrent requests", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-12", "area": "Bookings", "title": "end_time before start_time is rejected", "priority": "High", "automatable": true, "note": "Expected to expose defect D-04" },
-    { "id": "TC-BOOK-13", "area": "Bookings", "title": "Missing required fields", "priority": "Medium", "automatable": true },
-    { "id": "TC-BOOK-14", "area": "Bookings", "title": "Resource marked not bookable", "priority": "Medium", "automatable": true },
-    { "id": "TC-BOOK-15", "area": "Bookings", "title": "Resource under maintenance", "priority": "Medium", "automatable": true },
-    { "id": "TC-BOOK-16", "area": "Bookings", "title": "Global resource allowed_roles enforced", "priority": "Medium", "automatable": true },
-    { "id": "TC-BOOK-17", "area": "Bookings", "title": "Tenant admin approves a pending booking", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-18", "area": "Bookings", "title": "Approving a non-pending booking", "priority": "Medium", "automatable": true },
-    { "id": "TC-BOOK-19", "area": "Bookings", "title": "Reject a booking with a reason", "priority": "Medium", "automatable": true },
-    { "id": "TC-BOOK-20", "area": "Bookings", "title": "Owner cancels their own booking", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-21", "area": "Bookings", "title": "Another student cannot cancel it", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-22", "area": "Bookings", "title": "Another student cannot edit it", "priority": "High", "automatable": true },
-    { "id": "TC-BOOK-23", "area": "Bookings", "title": "Status transitions approved to active to completed", "priority": "Medium", "automatable": true },
-    { "id": "TC-BOOK-24", "area": "Bookings", "title": "Page size is capped at 100", "priority": "Low", "automatable": true },
-
-    { "id": "TC-TOK-01", "area": "Tokens", "title": "New student receives 100 tokens", "priority": "High", "automatable": true },
-    { "id": "TC-TOK-02", "area": "Tokens", "title": "Hourly rate charged per hour", "priority": "High", "automatable": true },
-    { "id": "TC-TOK-03", "area": "Tokens", "title": "Part-hours round up", "priority": "High", "automatable": true },
-    { "id": "TC-TOK-04", "area": "Tokens", "title": "Minimum one hour charged", "priority": "Medium", "automatable": true },
-    { "id": "TC-TOK-05", "area": "Tokens", "title": "Insufficient balance rolls the booking back", "priority": "High", "automatable": true },
-    { "id": "TC-TOK-06", "area": "Tokens", "title": "Cancellation refunds 50 percent, rounded down", "priority": "High", "automatable": true },
-    { "id": "TC-TOK-07", "area": "Tokens", "title": "A bumped student is refunded", "priority": "High", "automatable": true, "note": "Expected to expose defect D-02" },
-    { "id": "TC-TOK-08", "area": "Tokens", "title": "Monthly renewal resets the balance", "priority": "Medium", "automatable": true },
-    { "id": "TC-TOK-09", "area": "Tokens", "title": "Renewal runs only once per month", "priority": "High", "automatable": true },
-    { "id": "TC-TOK-10", "area": "Tokens", "title": "Bulk quota update is tenant-scoped", "priority": "High", "automatable": true },
-    { "id": "TC-TOK-11", "area": "Tokens", "title": "Admin adjusts one student's balance", "priority": "Medium", "automatable": true },
-    { "id": "TC-TOK-12", "area": "Tokens", "title": "Negative quota is rejected", "priority": "Low", "automatable": true },
-
-    { "id": "TC-RES-01", "area": "Resources", "title": "Admin creates, edits and retires a resource", "priority": "High", "automatable": true },
-    { "id": "TC-RES-02", "area": "Resources", "title": "Availability reflects existing bookings", "priority": "Medium", "automatable": true },
-    { "id": "TC-RES-03", "area": "Resources", "title": "Filter and search the resource list", "priority": "Medium", "automatable": true },
-
-    { "id": "TC-ST-01", "area": "Student resources", "title": "A student shares an item", "priority": "High", "automatable": true },
-    { "id": "TC-ST-02", "area": "Student resources", "title": "A lecturer cannot share an item", "priority": "Medium", "automatable": true },
-    { "id": "TC-ST-03", "area": "Student resources", "title": "Another student cannot edit it", "priority": "High", "automatable": true },
-    { "id": "TC-ST-04", "area": "Student resources", "title": "A lecturer can moderate any item", "priority": "Low", "automatable": true },
-    { "id": "TC-ST-05", "area": "Student resources", "title": "Disallowed file extension rejected", "priority": "High", "automatable": true },
-    { "id": "TC-ST-06", "area": "Student resources", "title": "Image over 5 MB rejected", "priority": "Medium", "automatable": true },
-    { "id": "TC-ST-07", "area": "Student resources", "title": "Avatar over 2 MB rejected", "priority": "Medium", "automatable": true },
-    { "id": "TC-ST-08", "area": "Student resources", "title": "created_by cannot be overwritten", "priority": "High", "automatable": true },
-
-    { "id": "TC-NOT-01", "area": "Notifications", "title": "Booking event produces a notification", "priority": "High", "automatable": true },
-    { "id": "TC-NOT-02", "area": "Notifications", "title": "Approval sends an email via Resend", "priority": "High", "automatable": false, "method": "Manual — needs a real mailbox" },
-    { "id": "TC-NOT-03", "area": "Notifications", "title": "Notifications are private to their owner", "priority": "High", "automatable": true },
-    { "id": "TC-NOT-04", "area": "Notifications", "title": "Unread count is correct", "priority": "Medium", "automatable": true },
-    { "id": "TC-NOT-05", "area": "Notifications", "title": "Booking still succeeds when Redis is down", "priority": "High", "automatable": true },
-    { "id": "TC-NOT-06", "area": "Notifications", "title": "Consumer resumes after a restart", "priority": "Medium", "automatable": true },
-    { "id": "TC-NOT-07", "area": "Notifications", "title": "Replayed events do not duplicate", "priority": "Medium", "automatable": true },
-
-    { "id": "TC-GUI-01", "area": "GUI", "title": "Signed-out visitor is redirected to login", "priority": "High", "automatable": true },
-    { "id": "TC-GUI-02", "area": "GUI", "title": "Signed-in user is redirected away from login", "priority": "High", "automatable": true },
-    { "id": "TC-GUI-03", "area": "GUI", "title": "Empty login form does not submit", "priority": "Medium", "automatable": true },
-    { "id": "TC-GUI-04", "area": "GUI", "title": "Wrong password shows a readable error", "priority": "High", "automatable": true },
-    { "id": "TC-GUI-05", "area": "GUI", "title": "Submit is disabled while in flight", "priority": "Medium", "automatable": true },
-    { "id": "TC-GUI-06", "area": "GUI", "title": "Empty states are helpful, not blank", "priority": "Medium", "automatable": true },
-    { "id": "TC-GUI-07", "area": "GUI", "title": "Booking conflict is explained in plain language", "priority": "High", "automatable": true },
-    { "id": "TC-GUI-08", "area": "GUI", "title": "Suspended account screen with a working sign-out", "priority": "High", "automatable": true },
-    { "id": "TC-GUI-09", "area": "GUI", "title": "Unknown URL returns to the dashboard", "priority": "Medium", "automatable": true },
-    { "id": "TC-GUI-10", "area": "GUI", "title": "Admin links hidden from a student", "priority": "High", "automatable": true },
-    { "id": "TC-GUI-11", "area": "GUI", "title": "Bottom nav on a phone, no sideways scroll", "priority": "High", "automatable": true },
-    { "id": "TC-GUI-12", "area": "GUI", "title": "Sidebar on desktop", "priority": "Medium", "automatable": true },
-    { "id": "TC-GUI-13", "area": "GUI", "title": "Image crop modal uploads the cropped result", "priority": "Medium", "automatable": true },
-    { "id": "TC-GUI-14", "area": "GUI", "title": "Emoji and accented names survive a round trip", "priority": "Medium", "automatable": true },
-    { "id": "TC-GUI-15", "area": "GUI", "title": "Very long names wrap rather than clip", "priority": "Low", "automatable": true },
-
-    { "id": "TC-A11Y-01", "area": "Accessibility", "title": "Whole booking completed by keyboard alone", "priority": "High", "automatable": false, "method": "Manual — Cypress cannot press Tab natively" },
-    { "id": "TC-A11Y-02", "area": "Accessibility", "title": "Contrast and WCAG 2.1 AA rules", "priority": "High", "automatable": true },
-    { "id": "TC-A11Y-03", "area": "Accessibility", "title": "Every form field has a label", "priority": "High", "automatable": true },
-    { "id": "TC-A11Y-04", "area": "Accessibility", "title": "Validation errors are announced", "priority": "High", "automatable": true },
-    { "id": "TC-A11Y-05", "area": "Accessibility", "title": "Toasts are announced", "priority": "Medium", "automatable": true },
-    { "id": "TC-A11Y-06", "area": "Accessibility", "title": "Status is not colour-only", "priority": "High", "automatable": true },
-    { "id": "TC-A11Y-07", "area": "Accessibility", "title": "Images have text alternatives", "priority": "Medium", "automatable": true },
-    { "id": "TC-A11Y-08", "area": "Accessibility", "title": "Readable at 200 percent zoom", "priority": "Medium", "automatable": true },
-    { "id": "TC-A11Y-09", "area": "Accessibility", "title": "Screen reader run-through", "priority": "High", "automatable": false, "method": "Manual — VoiceOver or NVDA" },
-    { "id": "TC-A11Y-10", "area": "Accessibility", "title": "Reduced-motion preference respected", "priority": "Medium", "automatable": true },
-
-    { "id": "TC-PERF-01", "area": "Performance", "title": "Baseline browsing at 50 users", "priority": "High", "automatable": true, "method": "JMeter" },
-    { "id": "TC-PERF-02", "area": "Performance", "title": "Booking storm: exactly one winner", "priority": "High", "automatable": true, "method": "JMeter" },
-    { "id": "TC-PERF-03", "area": "Performance", "title": "Rate limits throttle a single client", "priority": "High", "automatable": true, "method": "JMeter" },
-    { "id": "TC-PERF-04", "area": "Performance", "title": "Two-hour soak, no memory growth", "priority": "Medium", "automatable": true, "method": "JMeter" },
-    { "id": "TC-PERF-05", "area": "Performance", "title": "Spike from 10 to 200 users", "priority": "Medium", "automatable": true, "method": "JMeter" },
-    { "id": "TC-PERF-06", "area": "Performance", "title": "Throughput improves with replicas", "priority": "Medium", "automatable": true, "method": "JMeter" },
-    { "id": "TC-PERF-07", "area": "Performance", "title": "Concurrent large uploads do not OOM", "priority": "High", "automatable": true, "method": "JMeter" },
-    { "id": "TC-PERF-08", "area": "Performance", "title": "Lighthouse mobile performance at least 80", "priority": "Medium", "automatable": true, "method": "Lighthouse" },
-
-    { "id": "TC-SEC-01", "area": "Security", "title": "IDOR on GET /users/:uid", "priority": "High", "automatable": true },
-    { "id": "TC-SEC-02", "area": "Security", "title": "Admin endpoints refuse a student token", "priority": "High", "automatable": true },
-    { "id": "TC-SEC-03", "area": "Security", "title": "Forged JWT is rejected", "priority": "High", "automatable": true },
-    { "id": "TC-SEC-04", "area": "Security", "title": "tenant_id cannot be changed via profile update", "priority": "High", "automatable": true },
-    { "id": "TC-SEC-05", "area": "Security", "title": "No secrets committed to the repository", "priority": "High", "automatable": true, "method": "Gitleaks" },
-    { "id": "TC-SEC-06", "area": "Security", "title": "TLS configuration grades A", "priority": "Medium", "automatable": false, "method": "Manual — SSL Labs against the public host" },
-    { "id": "TC-SEC-07", "area": "Security", "title": "PostREST filter cannot be escaped via search", "priority": "High", "automatable": true },
-    { "id": "TC-SEC-08", "area": "Security", "title": "Stored XSS in resource names is escaped", "priority": "High", "automatable": true },
-    { "id": "TC-SEC-09", "area": "Security", "title": "OTP cannot be brute-forced", "priority": "High", "automatable": true, "note": "Expected to expose defect D-03" },
-    { "id": "TC-SEC-10", "area": "Security", "title": "CORS does not reflect an arbitrary origin", "priority": "High", "automatable": true, "note": "Expected to expose defect D-06" },
-    { "id": "TC-SEC-11", "area": "Security", "title": "Service ports are not reachable directly", "priority": "High", "automatable": true },
-    { "id": "TC-SEC-12", "area": "Security", "title": "No High or Critical dependency vulnerabilities", "priority": "High", "automatable": true, "method": "npm audit, Snyk, Trivy" },
-    { "id": "TC-SEC-13", "area": "Security", "title": "Banned user's token stops working", "priority": "High", "automatable": true },
-    { "id": "TC-SEC-14", "area": "Security", "title": "Double-extension upload is rejected", "priority": "High", "automatable": true },
-    { "id": "TC-SEC-15", "area": "Security", "title": "OTPs are never written to logs", "priority": "High", "automatable": true, "note": "Expected to expose defect D-07" },
-    { "id": "TC-SEC-16", "area": "Security", "title": "Errors leak no stack trace or SQL", "priority": "High", "automatable": true },
-    { "id": "TC-SEC-17", "area": "Security", "title": "Server does not fetch arbitrary URLs", "priority": "Medium", "automatable": true },
-    { "id": "TC-SEC-18", "area": "Security", "title": "Oversized payload rejected at the gateway", "priority": "Medium", "automatable": true },
-
-    { "id": "TC-ERR-01", "area": "Error handling", "title": "Offline shows a network error, app survives", "priority": "High", "automatable": true },
-    { "id": "TC-ERR-02", "area": "Error handling", "title": "One service down degrades gracefully", "priority": "High", "automatable": true },
-    { "id": "TC-ERR-03", "area": "Error handling", "title": "Expired token is refreshed transparently", "priority": "High", "automatable": true },
-    { "id": "TC-ERR-04", "area": "Error handling", "title": "Failed refresh redirects to login, no loop", "priority": "High", "automatable": true },
-    { "id": "TC-ERR-05", "area": "Error handling", "title": "Database unreachable leaks no credentials", "priority": "High", "automatable": true },
-    { "id": "TC-ERR-06", "area": "Error handling", "title": "Redis down: bookings work, OTP fails clearly", "priority": "High", "automatable": true },
-    { "id": "TC-ERR-07", "area": "Error handling", "title": "Malformed JSON returns 400, not 500", "priority": "Medium", "automatable": true },
-    { "id": "TC-ERR-08", "area": "Error handling", "title": "Wrong data type names the offending field", "priority": "Medium", "automatable": true },
-    { "id": "TC-ERR-09", "area": "Error handling", "title": "Resource deleted mid-booking handled", "priority": "Medium", "automatable": true },
-    { "id": "TC-ERR-10", "area": "Error handling", "title": "Rapid double submit creates one booking", "priority": "High", "automatable": true },
-    { "id": "TC-ERR-11", "area": "Error handling", "title": "Email failure does not block signup", "priority": "Medium", "automatable": true },
-    { "id": "TC-ERR-12", "area": "Error handling", "title": "Browser back button does not resubmit", "priority": "Medium", "automatable": true },
-
-    { "id": "TC-USE-01", "area": "Usability", "title": "Create an account and join a faculty", "priority": "High", "automatable": false, "method": "Beta session" },
-    { "id": "TC-USE-02", "area": "Usability", "title": "Find and book a free projector for two hours", "priority": "High", "automatable": false, "method": "Beta session" },
-    { "id": "TC-USE-03", "area": "Usability", "title": "Understand the remaining token balance", "priority": "High", "automatable": false, "method": "Beta session" },
-    { "id": "TC-USE-04", "area": "Usability", "title": "Cancel a booking and understand the refund", "priority": "High", "automatable": false, "method": "Beta session" },
-    { "id": "TC-USE-05", "area": "Usability", "title": "Share an item and set a borrowing cost", "priority": "Medium", "automatable": false, "method": "Beta session" },
-    { "id": "TC-USE-06", "area": "Usability", "title": "Admin approves a booking and identifies the requester", "priority": "High", "automatable": false, "method": "Beta session" },
-    { "id": "TC-USE-07", "area": "Usability", "title": "Lecturer bumps a student and understands the effect", "priority": "High", "automatable": false, "method": "Beta session" }
+    {
+      "id": "TC-AUTH-01",
+      "area": "Authentication",
+      "title": "Sign up with a valid, active faculty code",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-02",
+      "area": "Authentication",
+      "title": "Sign up with a faculty code that does not exist",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-03",
+      "area": "Authentication",
+      "title": "Sign up with an inactive faculty",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-04",
+      "area": "Authentication",
+      "title": "Sign up twice with the same account",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-05",
+      "area": "Authentication",
+      "title": "Request an email OTP, then submit the correct code",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-06",
+      "area": "Authentication",
+      "title": "Submit an OTP after 10 minutes",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-07",
+      "area": "Authentication",
+      "title": "Submit a wrong OTP",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-08",
+      "area": "Authentication",
+      "title": "Request 6 OTPs within 10 minutes",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-09",
+      "area": "Authentication",
+      "title": "Guess OTPs 50 times in a row",
+      "priority": "High",
+      "automatable": true,
+      "note": "Expected to expose defect D-03"
+    },
+    {
+      "id": "TC-AUTH-10",
+      "area": "Authentication",
+      "title": "Request verification for an already-registered email",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-11",
+      "area": "Authentication",
+      "title": "Forgot password with a mismatched member ID",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-12",
+      "area": "Authentication",
+      "title": "Reset password with a valid code",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-13",
+      "area": "Authentication",
+      "title": "Reset password with a 3-character password",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-14",
+      "area": "Authentication",
+      "title": "Protected endpoint with no Authorization header",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-15",
+      "area": "Authentication",
+      "title": "Malformed or expired token",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-16",
+      "area": "Authentication",
+      "title": "Banned user calls the API with an existing token",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-AUTH-17",
+      "area": "Authentication",
+      "title": "Unban the user and refresh the token",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-01",
+      "area": "Roles & tenancy",
+      "title": "Student tries to create a resource",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-02",
+      "area": "Roles & tenancy",
+      "title": "Student tries to approve a booking",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-03",
+      "area": "Roles & tenancy",
+      "title": "Tenant admin tries to assign main_admin",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-04",
+      "area": "Roles & tenancy",
+      "title": "Tenant admin changes a role outside their faculty",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-05",
+      "area": "Roles & tenancy",
+      "title": "Tenant admin tries to ban a user",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-06",
+      "area": "Roles & tenancy",
+      "title": "Main admin tries to ban themselves",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-07",
+      "area": "Roles & tenancy",
+      "title": "Main admin tries to ban another main admin",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-08",
+      "area": "Roles & tenancy",
+      "title": "Faculty A user reads a Faculty B booking",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-09",
+      "area": "Roles & tenancy",
+      "title": "Faculty A user books a Faculty B resource",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-10",
+      "area": "Roles & tenancy",
+      "title": "User with no tenant lists bookings",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-11",
+      "area": "Roles & tenancy",
+      "title": "Student A reads Student B's profile",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-12",
+      "area": "Roles & tenancy",
+      "title": "Student self-updates with role=main_admin",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-RBAC-13",
+      "area": "Roles & tenancy",
+      "title": "RLS blocks cross-faculty rows at the database",
+      "priority": "High",
+      "automatable": true,
+      "method": "SQL"
+    },
+    {
+      "id": "TC-RBAC-14",
+      "area": "Roles & tenancy",
+      "title": "Role change syncs Firebase claims",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-01",
+      "area": "Bookings",
+      "title": "Student books a free equipment slot",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-02",
+      "area": "Bookings",
+      "title": "Lecturer booking is auto-approved",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-03",
+      "area": "Bookings",
+      "title": "Student cannot book a lecture hall",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-04",
+      "area": "Bookings",
+      "title": "Equal priority overlap is refused",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-05",
+      "area": "Bookings",
+      "title": "Lecturer bumps a student",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-06",
+      "area": "Bookings",
+      "title": "Student cannot take a lecturer's slot",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-07",
+      "area": "Bookings",
+      "title": "Overlap that fully contains an existing booking",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-08",
+      "area": "Bookings",
+      "title": "Overlap on the start edge",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-09",
+      "area": "Bookings",
+      "title": "Overlap on the end edge",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-10",
+      "area": "Bookings",
+      "title": "Adjacent slot is not an overlap",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-11",
+      "area": "Bookings",
+      "title": "Two identical concurrent requests",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-12",
+      "area": "Bookings",
+      "title": "end_time before start_time is rejected",
+      "priority": "High",
+      "automatable": true,
+      "note": "Expected to expose defect D-04"
+    },
+    {
+      "id": "TC-BOOK-13",
+      "area": "Bookings",
+      "title": "Missing required fields",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-14",
+      "area": "Bookings",
+      "title": "Resource marked not bookable",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-15",
+      "area": "Bookings",
+      "title": "Resource under maintenance",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-16",
+      "area": "Bookings",
+      "title": "Global resource allowed_roles enforced",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-17",
+      "area": "Bookings",
+      "title": "Tenant admin approves a pending booking",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-18",
+      "area": "Bookings",
+      "title": "Approving a non-pending booking",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-19",
+      "area": "Bookings",
+      "title": "Reject a booking with a reason",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-20",
+      "area": "Bookings",
+      "title": "Owner cancels their own booking",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-21",
+      "area": "Bookings",
+      "title": "Another student cannot cancel it",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-22",
+      "area": "Bookings",
+      "title": "Another student cannot edit it",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-23",
+      "area": "Bookings",
+      "title": "Status transitions approved to active to completed",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-BOOK-24",
+      "area": "Bookings",
+      "title": "Page size is capped at 100",
+      "priority": "Low",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-01",
+      "area": "Tokens",
+      "title": "New student receives 100 tokens",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-02",
+      "area": "Tokens",
+      "title": "Hourly rate charged per hour",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-03",
+      "area": "Tokens",
+      "title": "Part-hours round up",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-04",
+      "area": "Tokens",
+      "title": "Minimum one hour charged",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-05",
+      "area": "Tokens",
+      "title": "Insufficient balance rolls the booking back",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-06",
+      "area": "Tokens",
+      "title": "Cancellation refunds 50 percent, rounded down",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-07",
+      "area": "Tokens",
+      "title": "A bumped student is refunded",
+      "priority": "High",
+      "automatable": true,
+      "note": "Expected to expose defect D-02"
+    },
+    {
+      "id": "TC-TOK-08",
+      "area": "Tokens",
+      "title": "Monthly renewal resets the balance",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-09",
+      "area": "Tokens",
+      "title": "Renewal runs only once per month",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-10",
+      "area": "Tokens",
+      "title": "Bulk quota update is tenant-scoped",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-11",
+      "area": "Tokens",
+      "title": "Admin adjusts one student's balance",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-TOK-12",
+      "area": "Tokens",
+      "title": "Negative quota is rejected",
+      "priority": "Low",
+      "automatable": true
+    },
+    {
+      "id": "TC-RES-01",
+      "area": "Resources",
+      "title": "Admin creates, edits and retires a resource",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-RES-02",
+      "area": "Resources",
+      "title": "Availability reflects existing bookings",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-RES-03",
+      "area": "Resources",
+      "title": "Filter and search the resource list",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-ST-01",
+      "area": "Student resources",
+      "title": "A student shares an item",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-ST-02",
+      "area": "Student resources",
+      "title": "A lecturer cannot share an item",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-ST-03",
+      "area": "Student resources",
+      "title": "Another student cannot edit it",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-ST-04",
+      "area": "Student resources",
+      "title": "A lecturer can moderate any item",
+      "priority": "Low",
+      "automatable": true
+    },
+    {
+      "id": "TC-ST-05",
+      "area": "Student resources",
+      "title": "Disallowed file extension rejected",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-ST-06",
+      "area": "Student resources",
+      "title": "Image over 5 MB rejected",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-ST-07",
+      "area": "Student resources",
+      "title": "Avatar over 2 MB rejected",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-ST-08",
+      "area": "Student resources",
+      "title": "created_by cannot be overwritten",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-NOT-01",
+      "area": "Notifications",
+      "title": "Booking event produces a notification",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-NOT-02",
+      "area": "Notifications",
+      "title": "Approval sends an email via Resend",
+      "priority": "High",
+      "automatable": false,
+      "method": "Manual \u2014 needs a real mailbox"
+    },
+    {
+      "id": "TC-NOT-03",
+      "area": "Notifications",
+      "title": "Notifications are private to their owner",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-NOT-04",
+      "area": "Notifications",
+      "title": "Unread count is correct",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-NOT-05",
+      "area": "Notifications",
+      "title": "Booking still succeeds when Redis is down",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-NOT-06",
+      "area": "Notifications",
+      "title": "Consumer resumes after a restart",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-NOT-07",
+      "area": "Notifications",
+      "title": "Replayed events do not duplicate",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-01",
+      "area": "GUI",
+      "title": "Signed-out visitor is redirected to login",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-02",
+      "area": "GUI",
+      "title": "Signed-in user is redirected away from login",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-03",
+      "area": "GUI",
+      "title": "Empty login form does not submit",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-04",
+      "area": "GUI",
+      "title": "Wrong password shows a readable error",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-05",
+      "area": "GUI",
+      "title": "Submit is disabled while in flight",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-06",
+      "area": "GUI",
+      "title": "Empty states are helpful, not blank",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-07",
+      "area": "GUI",
+      "title": "Booking conflict is explained in plain language",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-08",
+      "area": "GUI",
+      "title": "Suspended account screen with a working sign-out",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-09",
+      "area": "GUI",
+      "title": "Unknown URL returns to the dashboard",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-10",
+      "area": "GUI",
+      "title": "Admin links hidden from a student",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-11",
+      "area": "GUI",
+      "title": "Bottom nav on a phone, no sideways scroll",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-12",
+      "area": "GUI",
+      "title": "Sidebar on desktop",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-13",
+      "area": "GUI",
+      "title": "Image crop modal uploads the cropped result",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-14",
+      "area": "GUI",
+      "title": "Emoji and accented names survive a round trip",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-GUI-15",
+      "area": "GUI",
+      "title": "Very long names wrap rather than clip",
+      "priority": "Low",
+      "automatable": true
+    },
+    {
+      "id": "TC-A11Y-01",
+      "area": "Accessibility",
+      "title": "Whole booking completed by keyboard alone",
+      "priority": "High",
+      "automatable": false,
+      "method": "Manual \u2014 Cypress cannot press Tab natively"
+    },
+    {
+      "id": "TC-A11Y-02",
+      "area": "Accessibility",
+      "title": "Contrast and WCAG 2.1 AA rules",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-A11Y-03",
+      "area": "Accessibility",
+      "title": "Every form field has a label",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-A11Y-04",
+      "area": "Accessibility",
+      "title": "Validation errors are announced",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-A11Y-05",
+      "area": "Accessibility",
+      "title": "Toasts are announced",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-A11Y-06",
+      "area": "Accessibility",
+      "title": "Status is not colour-only",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-A11Y-07",
+      "area": "Accessibility",
+      "title": "Images have text alternatives",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-A11Y-08",
+      "area": "Accessibility",
+      "title": "Readable at 200 percent zoom",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-A11Y-09",
+      "area": "Accessibility",
+      "title": "Screen reader run-through",
+      "priority": "High",
+      "automatable": false,
+      "method": "Manual \u2014 VoiceOver or NVDA"
+    },
+    {
+      "id": "TC-A11Y-10",
+      "area": "Accessibility",
+      "title": "Reduced-motion preference respected",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-PERF-01",
+      "area": "Performance",
+      "title": "Baseline browsing at 50 users",
+      "priority": "High",
+      "automatable": true,
+      "method": "JMeter"
+    },
+    {
+      "id": "TC-PERF-02",
+      "area": "Performance",
+      "title": "Booking storm: exactly one winner",
+      "priority": "High",
+      "automatable": true,
+      "method": "JMeter"
+    },
+    {
+      "id": "TC-PERF-03",
+      "area": "Performance",
+      "title": "Rate limits throttle a single client",
+      "priority": "High",
+      "automatable": true,
+      "method": "JMeter"
+    },
+    {
+      "id": "TC-PERF-04",
+      "area": "Performance",
+      "title": "Two-hour soak, no memory growth",
+      "priority": "Medium",
+      "automatable": true,
+      "method": "JMeter"
+    },
+    {
+      "id": "TC-PERF-05",
+      "area": "Performance",
+      "title": "Spike from 10 to 200 users",
+      "priority": "Medium",
+      "automatable": true,
+      "method": "JMeter"
+    },
+    {
+      "id": "TC-PERF-06",
+      "area": "Performance",
+      "title": "Throughput improves with replicas",
+      "priority": "Medium",
+      "automatable": true,
+      "method": "JMeter"
+    },
+    {
+      "id": "TC-PERF-07",
+      "area": "Performance",
+      "title": "Concurrent large uploads do not OOM",
+      "priority": "High",
+      "automatable": true,
+      "method": "JMeter"
+    },
+    {
+      "id": "TC-PERF-08",
+      "area": "Performance",
+      "title": "Lighthouse mobile performance at least 80",
+      "priority": "Medium",
+      "automatable": true,
+      "method": "Lighthouse"
+    },
+    {
+      "id": "TC-SEC-01",
+      "area": "Security",
+      "title": "IDOR on GET /users/:uid",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-02",
+      "area": "Security",
+      "title": "Admin endpoints refuse a student token",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-03",
+      "area": "Security",
+      "title": "Forged JWT is rejected",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-04",
+      "area": "Security",
+      "title": "tenant_id cannot be changed via profile update",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-05",
+      "area": "Security",
+      "title": "No secrets committed to the repository",
+      "priority": "High",
+      "automatable": true,
+      "method": "Gitleaks"
+    },
+    {
+      "id": "TC-SEC-06",
+      "area": "Security",
+      "title": "TLS configuration grades A",
+      "priority": "Medium",
+      "automatable": false,
+      "method": "Manual \u2014 SSL Labs against the public host"
+    },
+    {
+      "id": "TC-SEC-07",
+      "area": "Security",
+      "title": "PostREST filter cannot be escaped via search",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-08",
+      "area": "Security",
+      "title": "Stored XSS in resource names is escaped",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-09",
+      "area": "Security",
+      "title": "OTP cannot be brute-forced",
+      "priority": "High",
+      "automatable": true,
+      "note": "Expected to expose defect D-03"
+    },
+    {
+      "id": "TC-SEC-10",
+      "area": "Security",
+      "title": "CORS does not reflect an arbitrary origin",
+      "priority": "High",
+      "automatable": true,
+      "note": "Expected to expose defect D-06"
+    },
+    {
+      "id": "TC-SEC-11",
+      "area": "Security",
+      "title": "Service ports are not reachable directly",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-12",
+      "area": "Security",
+      "title": "No High or Critical dependency vulnerabilities",
+      "priority": "High",
+      "automatable": true,
+      "method": "npm audit, Snyk, Trivy"
+    },
+    {
+      "id": "TC-SEC-13",
+      "area": "Security",
+      "title": "Banned user's token stops working",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-14",
+      "area": "Security",
+      "title": "Double-extension upload is rejected",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-15",
+      "area": "Security",
+      "title": "OTPs are never written to logs",
+      "priority": "High",
+      "automatable": true,
+      "note": "Expected to expose defect D-07"
+    },
+    {
+      "id": "TC-SEC-16",
+      "area": "Security",
+      "title": "Errors leak no stack trace or SQL",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-17",
+      "area": "Security",
+      "title": "Server does not fetch arbitrary URLs",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-SEC-18",
+      "area": "Security",
+      "title": "Oversized payload rejected at the gateway",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-ERR-01",
+      "area": "Error handling",
+      "title": "Offline shows a network error, app survives",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-ERR-02",
+      "area": "Error handling",
+      "title": "One service down degrades gracefully",
+      "priority": "High",
+      "automatable": false,
+      "method": "Manual \u2014 needs a service stopped mid-run"
+    },
+    {
+      "id": "TC-ERR-03",
+      "area": "Error handling",
+      "title": "Expired token is refreshed transparently",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-ERR-04",
+      "area": "Error handling",
+      "title": "Failed refresh redirects to login, no loop",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-ERR-05",
+      "area": "Error handling",
+      "title": "Database unreachable leaks no credentials",
+      "priority": "High",
+      "automatable": true
+    },
+    {
+      "id": "TC-ERR-06",
+      "area": "Error handling",
+      "title": "Redis down: bookings work, OTP fails clearly",
+      "priority": "High",
+      "automatable": false,
+      "method": "Manual \u2014 needs Redis stopped mid-run"
+    },
+    {
+      "id": "TC-ERR-07",
+      "area": "Error handling",
+      "title": "Malformed JSON returns 400, not 500",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-ERR-08",
+      "area": "Error handling",
+      "title": "Wrong data type names the offending field",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-ERR-09",
+      "area": "Error handling",
+      "title": "Resource deleted mid-booking handled",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-ERR-10",
+      "area": "Error handling",
+      "title": "Rapid double submit creates one booking",
+      "priority": "High",
+      "automatable": false,
+      "method": "Manual \u2014 booking wizard has no stable selectors yet"
+    },
+    {
+      "id": "TC-ERR-11",
+      "area": "Error handling",
+      "title": "Email failure does not block signup",
+      "priority": "Medium",
+      "automatable": true
+    },
+    {
+      "id": "TC-ERR-12",
+      "area": "Error handling",
+      "title": "Browser back button does not resubmit",
+      "priority": "Medium",
+      "automatable": false,
+      "method": "Manual \u2014 booking wizard has no stable selectors yet"
+    },
+    {
+      "id": "TC-USE-01",
+      "area": "Usability",
+      "title": "Create an account and join a faculty",
+      "priority": "High",
+      "automatable": false,
+      "method": "Beta session"
+    },
+    {
+      "id": "TC-USE-02",
+      "area": "Usability",
+      "title": "Find and book a free projector for two hours",
+      "priority": "High",
+      "automatable": false,
+      "method": "Beta session"
+    },
+    {
+      "id": "TC-USE-03",
+      "area": "Usability",
+      "title": "Understand the remaining token balance",
+      "priority": "High",
+      "automatable": false,
+      "method": "Beta session"
+    },
+    {
+      "id": "TC-USE-04",
+      "area": "Usability",
+      "title": "Cancel a booking and understand the refund",
+      "priority": "High",
+      "automatable": false,
+      "method": "Beta session"
+    },
+    {
+      "id": "TC-USE-05",
+      "area": "Usability",
+      "title": "Share an item and set a borrowing cost",
+      "priority": "Medium",
+      "automatable": false,
+      "method": "Beta session"
+    },
+    {
+      "id": "TC-USE-06",
+      "area": "Usability",
+      "title": "Admin approves a booking and identifies the requester",
+      "priority": "High",
+      "automatable": false,
+      "method": "Beta session"
+    },
+    {
+      "id": "TC-USE-07",
+      "area": "Usability",
+      "title": "Lecturer bumps a student and understands the effect",
+      "priority": "High",
+      "automatable": false,
+      "method": "Beta session"
+    }
   ]
 }
