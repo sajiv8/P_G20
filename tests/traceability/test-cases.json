@@ -236,28 +236,32 @@
       "area": "Authentication",
       "title": "Request an email OTP, then submit the correct code",
       "priority": "High",
-      "automatable": true
+      "automatable": false,
+      "method": "Obsolete \u2014 pre-signup OTP flow replaced by Firebase verification links"
     },
     {
       "id": "TC-AUTH-06",
       "area": "Authentication",
       "title": "Submit an OTP after 10 minutes",
       "priority": "Medium",
-      "automatable": true
+      "automatable": false,
+      "method": "Obsolete \u2014 pre-signup OTP flow replaced by Firebase verification links"
     },
     {
       "id": "TC-AUTH-07",
       "area": "Authentication",
       "title": "Submit a wrong OTP",
       "priority": "High",
-      "automatable": true
+      "automatable": false,
+      "method": "Obsolete \u2014 pre-signup OTP flow replaced by Firebase verification links"
     },
     {
       "id": "TC-AUTH-08",
       "area": "Authentication",
       "title": "Request 6 OTPs within 10 minutes",
       "priority": "High",
-      "automatable": true
+      "automatable": false,
+      "method": "Obsolete \u2014 pre-signup OTP flow replaced by Firebase verification links"
     },
     {
       "id": "TC-AUTH-09",
@@ -272,7 +276,8 @@
       "area": "Authentication",
       "title": "Request verification for an already-registered email",
       "priority": "Medium",
-      "automatable": true
+      "automatable": false,
+      "method": "Obsolete \u2014 pre-signup OTP flow replaced by Firebase verification links"
     },
     {
       "id": "TC-AUTH-11",

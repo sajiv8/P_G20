@@ -1,0 +1,12 @@
+{
+  // Tests only. The routes use `await import('firebase-admin/auth')`, and with
+  // module "Node16" TypeScript preserves that as a native dynamic import,
+  // which Jest's VM cannot load without --experimental-vm-modules. Compiling
+  // tests to CommonJS turns it into a require() that jest.mock can intercept,
+  // so the test run needs no experimental flags.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node"
+  }
+}
