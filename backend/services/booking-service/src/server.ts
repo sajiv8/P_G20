@@ -7,13 +7,13 @@
 
 import Fastify, { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
-import { errorHandler } from '@rso/shared';
+import { errorHandler, getAllowedOrigins } from '@rso/shared';
 import { bookingRoutes } from './routes';
 
 export function buildServer(): FastifyInstance {
   const server = Fastify({ logger: false, ignoreTrailingSlash: true });
 
-  server.register(cors, { origin: true });
+  server.register(cors, { origin: getAllowedOrigins() });
   server.setErrorHandler(errorHandler);
 
   server.get('/health', async () => ({

@@ -103,3 +103,30 @@ export function calculateRefund(originalAmount: number): number {
 export function calculateBumpRefund(originalAmount: number): number {
   return Math.abs(originalAmount);
 }
+
+/**
+ * Checks a requested booking window. Returns a message explaining the problem,
+ * or null when the window is usable.
+ *
+ * Without this, a reversed window is accepted and then behaves unpredictably:
+ * the overlap query finds nothing (it looks for rows starting before the end
+ * and ending after the start, which no row can satisfy) and the cost lands at
+ * the one-hour minimum, so the booking is charged as if it were valid.
+ *
+ * Whether a booking may be in the past is a separate product question and is
+ * deliberately not decided here.
+ */
+export function validateBookingWindow(startTime: unknown, endTime: unknown): string | null {
+  if (typeof startTime !== 'string' || typeof endTime !== 'string') {
+    return 'start_time and end_time must be ISO date strings';
+  }
+
+  const start = new Date(startTime).getTime();
+  const end = new Date(endTime).getTime();
+
+  if (Number.isNaN(start)) return 'start_time is not a valid date';
+  if (Number.isNaN(end)) return 'end_time is not a valid date';
+  if (end <= start) return 'end_time must be after start_time';
+
+  return null;
+}

@@ -6,13 +6,13 @@
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { logger, errorHandler } from '@rso/shared';
+import { logger, errorHandler, getAllowedOrigins } from '@rso/shared';
 import { notificationRoutes, startBookingEventConsumer, startSystemEventConsumer } from './routes';
 import { verifyMailerConnection } from './mail/mailer';
 
 const server = Fastify({ logger: false, ignoreTrailingSlash: true });
 
-server.register(cors, { origin: true });
+server.register(cors, { origin: getAllowedOrigins() });
 server.setErrorHandler(errorHandler);
 
 server.get('/health', async () => ({
