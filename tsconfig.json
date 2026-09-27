@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "moduleResolution": "Node16",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@rso/shared": ["backend/services/shared/src/index.ts"],
+      "@rso/shared/*": ["backend/services/shared/src/*"]
+    }
+  },
+  "include": [
+    "backend/services/**/*.ts",
+    "frontend/src/**/*.ts",
+    "frontend/src/**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/dist",
+    "**/build"
+  ]
+}
