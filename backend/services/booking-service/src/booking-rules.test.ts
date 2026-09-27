@@ -7,6 +7,7 @@ import {
   calculateBookingCost,
   calculateRefund,
   calculateBumpRefund,
+  validateBookingWindow,
 } from './booking-rules';
 
 describe('priorityOf', () => {
@@ -219,5 +220,36 @@ describe('calculateBumpRefund', () => {
 
   it('refunds nothing for a free booking', () => {
     expect(calculateBumpRefund(0)).toBe(0);
+  });
+});
+
+describe('validateBookingWindow', () => {
+  const at = (hhmm: string) => `2027-03-01T${hhmm}:00.000Z`;
+
+  it('accepts a normal forward window', () => {
+    expect(validateBookingWindow(at('10:00'), at('12:00'))).toBeNull();
+  });
+
+  // TC-BOOK-12 / D-04 — a reversed window used to be accepted silently.
+  it('rejects an end before the start', () => {
+    expect(validateBookingWindow(at('12:00'), at('10:00'))).toMatch(/after start_time/);
+  });
+
+  it('rejects a zero-length window', () => {
+    expect(validateBookingWindow(at('10:00'), at('10:00'))).toMatch(/after start_time/);
+  });
+
+  it('rejects an unparseable date', () => {
+    expect(validateBookingWindow('not-a-date', at('12:00'))).toMatch(/start_time is not a valid date/);
+    expect(validateBookingWindow(at('10:00'), 'tomorrow-ish')).toMatch(/end_time is not a valid date/);
+  });
+
+  it('rejects non-string input', () => {
+    expect(validateBookingWindow(undefined, at('12:00'))).toMatch(/ISO date strings/);
+    expect(validateBookingWindow(at('10:00'), 12345)).toMatch(/ISO date strings/);
+  });
+
+  it('accepts a one-minute window', () => {
+    expect(validateBookingWindow(at('10:00'), at('10:01'))).toBeNull();
   });
 });

@@ -92,10 +92,63 @@ export function errorHandler(
     return;
   }
 
+  // Fastify's own client errors — malformed JSON, unsupported media type,
+  // body too large — already carry the right status. Without this they fell
+  // through to the 500 below, reporting the client's mistake as our failure.
+  const fastifyStatus = (error as FastifyError).statusCode;
+  if (typeof fastifyStatus === 'number' && fastifyStatus >= 400 && fastifyStatus < 500) {
+    reply.code(fastifyStatus).send({
+      success: false,
+      error: {
+        code: typeof (error as FastifyError).code === 'string'
+          ? (error as FastifyError).code!
+          : 'BAD_REQUEST',
+        message: error.message,
+      },
+    } satisfies ApiResponse);
+    return;
+  }
+
   // Handle Supabase/Postgres errors
   if ('code' in error && typeof (error as any).code === 'string') {
     const pgCode = (error as any).code;
-    
+
+    // Class 22 is "data exception": the client sent a value Postgres could not
+    // accept for the column's type — a wrong-typed field, a malformed date, a
+    // number out of range. That is a bad request, not a server fault.
+    //
+    // The raw message ("invalid input syntax for type integer: \"many\"")
+    // names the offending value and implies the schema, so it is not passed
+    // through. The expected type is safe to surface and is genuinely useful.
+    if (pgCode.startsWith('22')) {
+      const expectedType = /for type (\w+)/.exec(error.message)?.[1];
+      reply.code(400).send({
+        success: false,
+        error: {
+          code: 'INVALID_FIELD_VALUE',
+          message: expectedType
+            ? `A field was given a value that is not a valid ${expectedType}.`
+            : 'A field was given a value of the wrong type or format.',
+        },
+      } satisfies ApiResponse);
+      return;
+    }
+
+    // 23502 not_null_violation, 23514 check_violation — a required field was
+    // missing, or a value failed a constraint. Also the client's doing.
+    if (pgCode === '23502' || pgCode === '23514') {
+      reply.code(400).send({
+        success: false,
+        error: {
+          code: pgCode === '23502' ? 'MISSING_REQUIRED_FIELD' : 'FIELD_CONSTRAINT_FAILED',
+          message: pgCode === '23502'
+            ? 'A required field was missing.'
+            : 'A field value is not allowed.',
+        },
+      } satisfies ApiResponse);
+      return;
+    }
+
     // 23P01 = exclusion_violation (double-booking)
     if (pgCode === '23P01') {
       reply.code(409).send({
@@ -110,12 +163,15 @@ export function errorHandler(
 
     // 23505 = unique_violation
     if (pgCode === '23505') {
+      // The raw message names the table and constraint
+      // ("...violates unique constraint \"user_profiles_email_key\""), so it
+      // is logged rather than returned.
+      logger.warn({ err: error.message, url: request.url }, 'Unique constraint violation');
       reply.code(409).send({
         success: false,
         error: {
           code: 'DUPLICATE_ENTRY',
           message: 'A record with this value already exists',
-          details: error.message,
         },
       } satisfies ApiResponse);
       return;

@@ -7,7 +7,7 @@
  */
 
 import type { FastifyInstance } from 'fastify';
-import { getSupabaseClient } from '@rso/shared';
+import { getSupabaseClient, publishEvent } from '@rso/shared';
 import { buildServer } from './server';
 import { createSupabaseMock } from './test-helpers/supabase-mock';
 import { authState, signInAs, signOut, TestUser } from './test-helpers/auth-state';
@@ -73,6 +73,10 @@ beforeEach(() => {
   supabase.reset();
   signOut();
   (getSupabaseClient as jest.Mock).mockReturnValue(supabase.client);
+  // Reset so a one-off rejection queued by an error-handling test cannot leak
+  // into the next one.
+  (publishEvent as jest.Mock).mockReset();
+  (publishEvent as jest.Mock).mockResolvedValue(undefined);
   app = buildServer();
 });
 
@@ -109,6 +113,29 @@ describe('POST /api/v1/bookings — access and validation', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.json().error.message).toMatch(/required/i);
+    expect(supabase.calls).toHaveLength(0);
+  });
+
+  // TC-BOOK-12 / D-04 — rejected before any database call is made.
+  it('rejects a booking whose end is before its start', async () => {
+    signInAs(STUDENT);
+
+    const res = await postBooking(validBooking({
+      start_time: '2027-03-01T12:00:00.000Z',
+      end_time: '2027-03-01T10:00:00.000Z',
+    }));
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/after start_time/);
+    expect(supabase.calls).toHaveLength(0);
+  });
+
+  it('rejects a booking with an unparseable date', async () => {
+    signInAs(STUDENT);
+
+    const res = await postBooking(validBooking({ end_time: 'next tuesday' }));
+
+    expect(res.statusCode).toBe(400);
     expect(supabase.calls).toHaveLength(0);
   });
 
@@ -421,11 +448,11 @@ describe('PUT /api/v1/bookings/:id/approve', () => {
   });
 
   // TC-BOOK-17
-  it('lets a tenant admin approve a pending booking', async () => {
+  it('lets a tenant admin approve a pending booking in their own faculty', async () => {
     signInAs(TENANT_ADMIN);
     supabase.queueResults(
-      { data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-a' } },
-      { data: { id: 'booking-1', status: 'approved', tenant_id: 'tenant-a' } }
+      { data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-a' } }, // tenant-ownership fetch
+      { data: { id: 'booking-1', status: 'approved', tenant_id: 'tenant-a' } }, // update
     );
 
     const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
@@ -440,11 +467,163 @@ describe('PUT /api/v1/bookings/:id/approve', () => {
   // TC-BOOK-18
   it('returns 404 when the booking is not pending', async () => {
     signInAs(TENANT_ADMIN);
-    supabase.queueResults({ data: null, error: { message: 'no rows' } });
+    supabase.queueResults({ data: null, error: { message: 'no rows' } }); // the fetch itself finds nothing
 
     const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
 
     expect(res.statusCode).toBe(404);
+  });
+
+  // TC-RBAC-04 — a tenant admin must not approve another faculty's booking.
+  it('stops a tenant admin approving a booking from another faculty', async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({ data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-b' } });
+
+    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+
+    expect(res.statusCode).toBe(403);
+    expect(supabase.findCall('bookings', 'update')).toBeUndefined();
+  });
+
+  it('lets main_admin approve a booking from any faculty', async () => {
+    signInAs({ ...TENANT_ADMIN, sub: 'super-1', appRole: 'main_admin', tenantId: null });
+    supabase.queueResults(
+      { data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-b' } },
+      { data: { id: 'booking-1', status: 'approved', tenant_id: 'tenant-b' } },
+    );
+
+    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+
+    expect(res.statusCode).toBe(200);
+  });
+});
+
+/**
+ * Error handling — how the service behaves when something goes wrong rather
+ * than when a user misuses it. A wrong status code here is not cosmetic: the
+ * frontend's retry logic branches on 401, and a 500 tells a client "we broke"
+ * when the truth is "your request was malformed".
+ */
+describe('error handling', () => {
+  // TC-ERR-07
+  it('returns 400, not 500, for a malformed JSON body', async () => {
+    signInAs(STUDENT);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/bookings',
+      headers: { 'content-type': 'application/json' },
+      payload: '{"resource_id": "resource-1", oops',
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  // TC-ERR-08
+  it('returns 400 for a field of the wrong type, and names the problem', async () => {
+    signInAs(STUDENT);
+    supabase.queueResults(
+      { data: equipment() },
+      { data: [] },
+      // Postgres rejects the insert: 22P02 is invalid_text_representation.
+      {
+        data: null,
+        error: { code: '22P02', message: 'invalid input syntax for type integer: "many"' },
+      },
+    );
+
+    const res = await postBooking(validBooking({ attendee_count: 'many' }));
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/attendee_count|whole number|integer/i);
+  });
+
+  // TC-ERR-08 — the same failure must not expose database internals.
+  it('does not leak raw database error text to the client', async () => {
+    signInAs(STUDENT);
+    supabase.queueResults(
+      { data: equipment() },
+      { data: [] },
+      {
+        data: null,
+        error: { code: '22P02', message: 'invalid input syntax for type integer: "many"' },
+      },
+    );
+
+    const res = await postBooking(validBooking({ attendee_count: 'many' }));
+    const body = res.payload;
+
+    expect(body).not.toMatch(/invalid input syntax/i);
+    expect(body).not.toMatch(/22P02/);
+  });
+
+  // TC-ERR-05
+  it('does not leak connection details when the database is unreachable', async () => {
+    signInAs(STUDENT);
+    supabase.queueResults(
+      { data: equipment() },
+      // A connection-level failure, carrying the kind of detail that must
+      // never reach a client.
+      {
+        data: null,
+        error: {
+          message: 'connect ECONNREFUSED db.abcdefgh.supabase.co:5432 key=eyJhbGciOiJIUzI1NiJ9',
+          code: 'ECONNREFUSED',
+        },
+      },
+    );
+
+    const res = await postBooking(validBooking());
+    const body = res.payload;
+
+    expect(res.statusCode).toBeGreaterThanOrEqual(500);
+    expect(body).not.toMatch(/supabase\.co/);
+    expect(body).not.toMatch(/eyJhbGciOi/); // a JWT/key prefix
+    expect(body).not.toMatch(/ECONNREFUSED/);
+  });
+
+  // TC-ERR-09
+  it('handles a resource deleted between page load and submit', async () => {
+    signInAs(STUDENT);
+    supabase.queueResults({ data: null }); // the resource is gone by submit time
+
+    const res = await postBooking(validBooking());
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json().error.message).toMatch(/resource/i);
+    // A clean 404, not a crash.
+    expect(res.json().success).toBe(false);
+  });
+
+  // TC-ERR-11
+  it('still creates the booking when the notification event fails to publish', async () => {
+    signInAs(STUDENT);
+    (publishEvent as jest.Mock).mockRejectedValueOnce(new Error('redis unreachable'));
+
+    supabase.queueResults(
+      { data: equipment() },
+      { data: [] },
+      { data: { id: 'booking-err-11', status: 'pending' } },
+    );
+
+    const res = await postBooking(validBooking());
+
+    // Notifications are a side effect. Losing one must not lose the booking.
+    expect(res.statusCode).toBe(201);
+    expect(res.json().data.id).toBe('booking-err-11');
+  });
+
+  it('reports a failed approval as 404 rather than surfacing the raw error', async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: null,
+      error: { message: 'relation "bookings" does not exist', code: '42P01' },
+    });
+
+    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.payload).not.toMatch(/relation "bookings"/);
   });
 });
 
