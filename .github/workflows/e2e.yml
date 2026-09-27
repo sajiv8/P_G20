@@ -56,6 +56,7 @@ jobs:
           FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_SERVICE_ACCOUNT_PATH=../../config/firebase-service-account.json
           REDIS_URL=redis://redis:6379
           NODE_ENV=test
           ENVEOF
@@ -77,15 +78,22 @@ jobs:
           exit 1
 
       - name: Write Cypress credentials
+        env:
+          TEST_STUDENT_EMAIL: ${{ secrets.TEST_STUDENT_EMAIL }}
+          TEST_STUDENT_PASSWORD: ${{ secrets.TEST_STUDENT_PASSWORD }}
+          TEST_ADMIN_EMAIL: ${{ secrets.TEST_ADMIN_EMAIL }}
+          TEST_ADMIN_PASSWORD: ${{ secrets.TEST_ADMIN_PASSWORD }}
         run: |
-          cat > cypress.env.json <<'JSONEOF'
-          {
-            "studentEmail": "${{ secrets.TEST_STUDENT_EMAIL }}",
-            "studentPassword": "${{ secrets.TEST_STUDENT_PASSWORD }}",
-            "adminEmail": "${{ secrets.TEST_ADMIN_EMAIL }}",
-            "adminPassword": "${{ secrets.TEST_ADMIN_PASSWORD }}"
-          }
-          JSONEOF
+          node -e "
+            const fs = require('fs');
+            const trim = v => (v || '').trim();
+            fs.writeFileSync('cypress.env.json', JSON.stringify({
+              studentEmail: trim(process.env.TEST_STUDENT_EMAIL),
+              studentPassword: trim(process.env.TEST_STUDENT_PASSWORD),
+              adminEmail: trim(process.env.TEST_ADMIN_EMAIL),
+              adminPassword: trim(process.env.TEST_ADMIN_PASSWORD),
+            }, null, 2));
+          "
 
       - name: Run the Cypress suite
         run: npm run test:gui
@@ -161,6 +169,7 @@ jobs:
           FIREBASE_PROJECT_ID=${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_API_KEY=${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_AUTH_DOMAIN=${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_SERVICE_ACCOUNT_PATH=../../config/firebase-service-account.json
           REDIS_URL=redis://redis:6379
           NODE_ENV=test
           ENVEOF

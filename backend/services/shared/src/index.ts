@@ -20,5 +20,6 @@ export { errorHandler, ApiError, sendSuccess, sendPaginated } from './error-hand
 export { logger, createRequestLogger } from './logger';
 export type { Logger } from './logger';
 export { requireRole, requireOwnTenant } from './role-guard';
+export { getAllowedOrigins } from './cors-config';
 export * from './types';
 

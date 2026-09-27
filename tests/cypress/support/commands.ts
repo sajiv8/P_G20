@@ -72,6 +72,14 @@ Cypress.Commands.add('login', (role: TestRole = 'student') => {
   cy.credentials(role).then(({ email, password }) => {
     cy.logout();
     cy.attemptLogin(email, password);
+    
+    cy.location('pathname', { timeout: 20000 }).should('not.eq', '/login');
+    cy.location('pathname').then(pathname => {
+      if (pathname === '/verify-email') {
+        throw new Error(`TEST ENVIRONMENT CONFIGURATION ERROR: The test account ${email} is unverified. E2E test accounts must be manually verified in Firebase.`);
+      }
+    });
+
     cy.get('.sidebar', { timeout: 20000 }).should('exist');
   });
 });
