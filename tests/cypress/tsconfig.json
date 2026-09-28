@@ -3,7 +3,7 @@
     "target": "ES2021",
     "lib": ["ES2021", "DOM"],
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "types": ["cypress", "node"],
     "strict": true,
     "esModuleInterop": true,
