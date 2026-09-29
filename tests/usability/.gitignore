@@ -1,0 +1,10 @@
+# Rendered guides. The admin build carries the shared login, so none of these
+# get committed. Rebuild with ./render-pdf.sh.
+participant-guide*.pdf
+
+# Local values fed to render-pdf.sh
+.render.env
+.build.html
+
+# Real SUS responses (responses.example.csv stays tracked as the format guide)
+responses.csv
