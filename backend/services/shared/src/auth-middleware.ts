@@ -79,6 +79,7 @@ export async function authMiddleware(
     request.user = {
       sub: decoded.uid,
       email: decoded.email,
+      emailVerified: decoded.email_verified === true,
       tenantId: decoded.tenant_id || null,
       appRole: (decoded.app_role as AppRole) || 'student',
       isBanned: decoded.is_banned === true,

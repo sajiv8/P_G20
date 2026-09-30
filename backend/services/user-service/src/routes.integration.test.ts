@@ -244,6 +244,191 @@ describe('POST /api/v1/users/signup', () => {
 });
 
 // ===========================================================================
+// Email verification and welcome email ordering
+// ===========================================================================
+describe('POST /api/v1/users/signup — email verification flow', () => {
+  const signup = (payload: Record<string, unknown>) =>
+    app.inject({ method: 'POST', url: '/api/v1/users/signup', payload });
+
+  // TC-AUTH-20: Signup must NOT publish user.signup (which triggers welcome email)
+  it('does not send user.signup event during signup', async () => {
+    signInAs(STUDENT);
+    supabase.queueResults(
+      { data: activeTenant },
+      { data: null },
+      { data: { firebase_uid: 'student-1', role: 'student' } },
+      { data: null },
+      { data: null },
+    );
+
+    await signup({ tenant_code: 'FOC', full_name: 'Test Student' });
+
+    // The only event published should be email_verification_requested, NOT user.signup
+    const calls = (publishEvent as jest.Mock).mock.calls;
+    const eventTypes = calls.map((c: any[]) => c[1]?.type);
+    expect(eventTypes).not.toContain('user.signup');
+  });
+
+  // TC-AUTH-21: Signup MUST publish email verification event
+  it('publishes user.email_verification_requested during signup', async () => {
+    signInAs(STUDENT);
+    supabase.queueResults(
+      { data: activeTenant },
+      { data: null },
+      { data: { firebase_uid: 'student-1', role: 'student' } },
+      { data: null },
+      { data: null },
+    );
+
+    await signup({ tenant_code: 'FOC', full_name: 'Test Student' });
+
+    const calls = (publishEvent as jest.Mock).mock.calls;
+    const verificationEvent = calls.find((c: any[]) => c[1]?.type === 'user.email_verification_requested');
+    expect(verificationEvent).toBeDefined();
+    expect(verificationEvent![1].payload.email).toBe(STUDENT.email);
+    expect(verificationEvent![1].payload.link).toBe('https://verify.example/link');
+  });
+});
+
+// ===========================================================================
+describe('POST /api/v1/users/welcome — post-verification welcome email', () => {
+  const welcome = () =>
+    app.inject({ method: 'POST', url: '/api/v1/users/welcome' });
+
+  const UNVERIFIED_STUDENT: TestUser = { ...STUDENT, emailVerified: false };
+  const VERIFIED_STUDENT: TestUser = { ...STUDENT, emailVerified: true };
+
+  // TC-AUTH-22: Unauthenticated request is rejected
+  it('rejects an unauthenticated request', async () => {
+    const res = await welcome();
+
+    expect(res.statusCode).toBe(401);
+    expect(supabase.calls).toHaveLength(0);
+  });
+
+  // TC-AUTH-23: Unverified user cannot trigger welcome email
+  it('rejects an unverified user with 403', async () => {
+    signInAs(UNVERIFIED_STUDENT);
+
+    const res = await welcome();
+
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error.message).toMatch(/verified/i);
+    expect(publishEvent).not.toHaveBeenCalled();
+  });
+
+  // TC-AUTH-24: Verified user receives welcome email
+  it('sends welcome email for a verified user', async () => {
+    signInAs(VERIFIED_STUDENT);
+    supabase.queueResults(
+      { data: { firebase_uid: 'student-1', email: 's1@test.local', full_name: 'Student', tenant_id: 'tenant-a', metadata: {} } },
+      { data: null }, // metadata update
+      { data: { name: 'Faculty of Computing' } }, // tenant lookup
+    );
+
+    const res = await welcome();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data.already_sent).toBe(false);
+
+    // Must publish user.signup event (which triggers the welcome email)
+    const calls = (publishEvent as jest.Mock).mock.calls;
+    const signupEvent = calls.find((c: any[]) => c[1]?.type === 'user.signup');
+    expect(signupEvent).toBeDefined();
+    expect(signupEvent![1].payload.email).toBe('s1@test.local');
+  });
+
+  // TC-AUTH-25: Welcome email is sent only once (idempotency)
+  it('does not send the welcome email a second time', async () => {
+    signInAs(VERIFIED_STUDENT);
+    supabase.queueResults(
+      { data: { firebase_uid: 'student-1', email: 's1@test.local', full_name: 'Student', tenant_id: 'tenant-a', metadata: { welcome_email_sent: true } } },
+    );
+
+    const res = await welcome();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data.already_sent).toBe(true);
+    // No event should be published
+    expect(publishEvent).not.toHaveBeenCalled();
+  });
+
+  // TC-AUTH-26: Backend rejects a frontend claim of verified when token says email_verified=false
+  it('backend does not trust frontend-supplied verification status', async () => {
+    // Even if someone sends a "verified: true" in the body, the route checks user.emailVerified from the token
+    signInAs(UNVERIFIED_STUDENT);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/v1/users/welcome',
+      payload: { verified: true, emailVerified: true },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(publishEvent).not.toHaveBeenCalled();
+  });
+
+  // TC-AUTH-27: Welcome endpoint works even when publish event fails
+  it('returns success even if the event publish fails', async () => {
+    signInAs(VERIFIED_STUDENT);
+    (publishEvent as jest.Mock).mockRejectedValue(new Error('redis down'));
+    supabase.queueResults(
+      { data: { firebase_uid: 'student-1', email: 's1@test.local', full_name: 'Student', tenant_id: 'tenant-a', metadata: {} } },
+      { data: null }, // metadata update
+      { data: { name: 'Faculty of Computing' } }, // tenant lookup
+    );
+
+    const res = await welcome();
+
+    // The flag was set, and the route returns success even if the event didn't publish.
+    expect(res.statusCode).toBe(200);
+  });
+});
+
+// ===========================================================================
+describe('POST /api/v1/users/resend-verification', () => {
+  const resend = () =>
+    app.inject({ method: 'POST', url: '/api/v1/users/resend-verification' });
+
+  const UNVERIFIED_STUDENT: TestUser = { ...STUDENT, emailVerified: false };
+  const VERIFIED_STUDENT: TestUser = { ...STUDENT, emailVerified: true };
+
+  // TC-AUTH-28: Resend verification works for unverified user
+  it('sends a verification email for an unverified user', async () => {
+    signInAs(UNVERIFIED_STUDENT);
+
+    const res = await resend();
+
+    expect(res.statusCode).toBe(200);
+    expect(firebaseAuth.generateEmailVerificationLink).toHaveBeenCalledWith(STUDENT.email);
+    expect(publishEvent).toHaveBeenCalled();
+    const verificationEvent = (publishEvent as jest.Mock).mock.calls.find(
+      (c: any[]) => c[1]?.type === 'user.email_verification_requested'
+    );
+    expect(verificationEvent).toBeDefined();
+  });
+
+  // TC-AUTH-29: Resend verification rejects already-verified user
+  it('rejects resend for an already-verified user', async () => {
+    signInAs(VERIFIED_STUDENT);
+
+    const res = await resend();
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/already verified/i);
+    expect(firebaseAuth.generateEmailVerificationLink).not.toHaveBeenCalled();
+  });
+
+  // TC-AUTH-30: Resend verification requires authentication
+  it('rejects an unauthenticated request', async () => {
+    const res = await resend();
+
+    expect(res.statusCode).toBe(401);
+    expect(firebaseAuth.generateEmailVerificationLink).not.toHaveBeenCalled();
+  });
+});
+
+// ===========================================================================
 describe('POST /api/v1/users/forgot-password', () => {
   const forgot = (payload: Record<string, unknown>) =>
     app.inject({ method: 'POST', url: '/api/v1/users/forgot-password', payload });
