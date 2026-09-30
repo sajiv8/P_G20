@@ -627,7 +627,7 @@ describe("PUT /api/v1/bookings/:id/status", () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it("rejects if reverting to pending causes an overlap", async () => {
+  it("rejects reverting a cancelled booking to pending (terminal state)", async () => {
     signInAs(TENANT_ADMIN);
     supabase.queueResults(
       {
@@ -640,7 +640,6 @@ describe("PUT /api/v1/bookings/:id/status", () => {
           end_time: "2027-01-01T12:00:00Z",
         },
       },
-      { data: [{ id: "overlap-1" }] }, // overlap check returns conflict
     );
 
     const res = await app.inject({
@@ -648,7 +647,8 @@ describe("PUT /api/v1/bookings/:id/status", () => {
       url: "/api/v1/bookings/booking-1/status",
       payload: { status: "pending" },
     });
-    expect(res.statusCode).toBe(409);
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/terminal state/i);
   });
 });
 
@@ -819,6 +819,559 @@ describe("error handling", () => {
 
     expect(res.statusCode).toBe(404);
     expect(res.payload).not.toMatch(/relation "bookings"/);
+  });
+});
+
+// ============================================================================
+// Authorization Matrix — Main Admin
+// ============================================================================
+
+const MAIN_ADMIN: TestUser = {
+  sub: "super-1",
+  email: "super@test.local",
+  tenantId: null,
+  appRole: "main_admin",
+};
+
+const TENANT_ADMIN_B: TestUser = {
+  sub: "admin-b",
+  email: "ab@test.local",
+  tenantId: "tenant-b",
+  appRole: "tenant_admin",
+};
+
+describe("Main Admin — cross-tenant booking management", () => {
+  // REQ-1: Main admin can view booking from Tenant A
+  it("can view a booking from any tenant", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults({
+      data: {
+        id: "booking-x",
+        tenant_id: "tenant-b",
+        booked_by: "student-b",
+        status: "pending",
+      },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/bookings/booking-x",
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  // REQ-3: Main admin can approve any booking
+  it("can approve a booking from any tenant", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults(
+      { data: { id: "booking-x", status: "pending", tenant_id: "tenant-b" } },
+      { data: { id: "booking-x", status: "approved", tenant_id: "tenant-b" } },
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-x/approve",
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  // REQ-4: Main admin can reject any booking
+  it("can reject a booking from any tenant", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults(
+      { data: { id: "booking-x", status: "pending", tenant_id: "tenant-b" } },
+      { data: { id: "booking-x", status: "rejected", tenant_id: "tenant-b" } },
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-x/reject",
+      payload: { reason: "Not appropriate" },
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  // REQ-6: Main admin can cancel approved booking
+  it("can cancel an approved booking from any tenant", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults(
+      { data: { id: "booking-x", status: "approved", tenant_id: "tenant-b", booked_by: "student-b" } },
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-x/cancel",
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  // REQ-7: Main admin can edit an approved booking
+  it("can edit an approved booking from any tenant", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults(
+      {
+        data: {
+          id: "booking-x",
+          status: "approved",
+          tenant_id: "tenant-b",
+          resource_id: "res-1",
+          start_time: "2027-03-01T10:00:00Z",
+          end_time: "2027-03-01T12:00:00Z",
+          title: "Old Title",
+        },
+      },
+      { data: { id: "booking-x", title: "New Title", status: "approved" } },
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-x",
+      payload: { title: "New Title" },
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  // REQ-8: Main admin can correct accidentally approved booking
+  it("can revert an approved booking to pending", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults(
+      {
+        data: {
+          id: "booking-x",
+          status: "approved",
+          tenant_id: "tenant-b",
+          resource_id: "res-1",
+          start_time: "2027-01-01T10:00:00Z",
+          end_time: "2027-01-01T12:00:00Z",
+        },
+      },
+      { data: { id: "booking-x", status: "pending", tenant_id: "tenant-b" } },
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-x/status",
+      payload: { status: "pending" },
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+});
+
+// ============================================================================
+// Authorization Matrix — Tenant Admin cross-tenant protection
+// ============================================================================
+
+describe("Tenant Admin — cross-tenant protection", () => {
+  // REQ-10: Tenant A admin cannot view Tenant B booking
+  it("cannot view a booking from another tenant", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: { id: "booking-b", tenant_id: "tenant-b", booked_by: "student-b", status: "pending" },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/bookings/booking-b",
+    });
+
+    expect(res.statusCode).toBe(403);
+  });
+
+  // REQ-12: Tenant A admin cannot approve Tenant B booking
+  it("cannot approve a booking from another tenant", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: { id: "booking-b", status: "pending", tenant_id: "tenant-b" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-b/approve",
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(supabase.findCall("bookings", "update")).toBeUndefined();
+  });
+
+  // REQ-14: Tenant A admin cannot reject Tenant B booking
+  it("cannot reject a booking from another tenant", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: { id: "booking-b", status: "pending", tenant_id: "tenant-b" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-b/reject",
+    });
+
+    expect(res.statusCode).toBe(403);
+  });
+
+  // REQ-16: Tenant A admin cannot cancel Tenant B booking
+  it("cannot cancel a booking from another tenant", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: null,
+      error: { message: "no rows" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-b/cancel",
+    });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  // REQ-18: Tenant A admin cannot edit Tenant B booking
+  it("cannot edit a booking from another tenant", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: {
+        id: "booking-b",
+        status: "pending",
+        tenant_id: "tenant-b",
+        resource_id: "res-1",
+        start_time: "2027-03-01T10:00:00Z",
+        end_time: "2027-03-01T12:00:00Z",
+        title: "Test",
+      },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-b",
+      payload: { title: "Hacked" },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(supabase.findCall("bookings", "update")).toBeUndefined();
+  });
+
+  // REQ-19: Tenant A admin cannot change Tenant B booking status
+  it("cannot change status of a booking from another tenant", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: {
+        id: "booking-b",
+        status: "approved",
+        tenant_id: "tenant-b",
+        resource_id: "res-1",
+      },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-b/status",
+      payload: { status: "cancelled" },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(supabase.findCall("bookings", "update")).toBeUndefined();
+  });
+
+  // REQ-15: Tenant admin CAN cancel own tenant's booking
+  it("can cancel a booking from their own tenant", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: { id: "booking-a", status: "approved", tenant_id: "tenant-a", booked_by: "student-1" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-a/cancel",
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+});
+
+// ============================================================================
+// State Machine — transition validation
+// ============================================================================
+
+describe("PUT /api/v1/bookings/:id/status — state machine", () => {
+  it("rejects completed → approved (terminal state)", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults({
+      data: { id: "b-1", status: "completed", tenant_id: "tenant-a", resource_id: "res-1" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/b-1/status",
+      payload: { status: "approved" },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/terminal state/i);
+    expect(supabase.findCall("bookings", "update")).toBeUndefined();
+  });
+
+  it("rejects rejected → active (terminal state)", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults({
+      data: { id: "b-2", status: "rejected", tenant_id: "tenant-a", resource_id: "res-1" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/b-2/status",
+      payload: { status: "active" },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/terminal state/i);
+  });
+
+  it("rejects cancelled → pending (terminal state)", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults({
+      data: { id: "b-3", status: "cancelled", tenant_id: "tenant-a", resource_id: "res-1" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/b-3/status",
+      payload: { status: "pending" },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/terminal state/i);
+  });
+
+  it("allows approved → cancelled", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults(
+      { data: { id: "b-4", status: "approved", tenant_id: "tenant-a", resource_id: "res-1" } },
+      { data: { id: "b-4", status: "cancelled", tenant_id: "tenant-a" } },
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/b-4/status",
+      payload: { status: "cancelled" },
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("allows active → cancelled", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults(
+      { data: { id: "b-5", status: "active", tenant_id: "tenant-a", resource_id: "res-1" } },
+      { data: { id: "b-5", status: "cancelled", tenant_id: "tenant-a" } },
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/b-5/status",
+      payload: { status: "cancelled" },
+    });
+
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("rejects pending → active (not an allowed transition)", async () => {
+    signInAs(MAIN_ADMIN);
+    supabase.queueResults({
+      data: { id: "b-6", status: "pending", tenant_id: "tenant-a", resource_id: "res-1" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/b-6/status",
+      payload: { status: "active" },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/Allowed transitions/);
+  });
+
+  it("rejects missing status field", async () => {
+    signInAs(MAIN_ADMIN);
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/b-7/status",
+      payload: {},
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/Missing status/);
+  });
+});
+
+// ============================================================================
+// Edit authorization matrix
+// ============================================================================
+
+describe("PUT /api/v1/bookings/:id (Edit) — authorization matrix", () => {
+  // REQ-23: Normal user cannot call admin endpoints
+  it("normal user cannot edit another user's booking", async () => {
+    signInAs(STUDENT);
+    supabase.queueResults({
+      data: {
+        id: "booking-other",
+        status: "pending",
+        tenant_id: "tenant-a",
+        booked_by: "student-other",
+        resource_id: "res-1",
+        start_time: "2027-03-01T10:00:00Z",
+        end_time: "2027-03-01T12:00:00Z",
+        title: "Not Mine",
+      },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-other",
+      payload: { title: "Stolen" },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(supabase.findCall("bookings", "update")).toBeUndefined();
+  });
+
+  it("normal user cannot edit a booking that is approved", async () => {
+    signInAs(STUDENT);
+    supabase.queueResults({
+      data: {
+        id: "booking-mine",
+        status: "approved",
+        tenant_id: "tenant-a",
+        booked_by: "student-1",
+        resource_id: "res-1",
+        start_time: "2027-03-01T10:00:00Z",
+        end_time: "2027-03-01T12:00:00Z",
+        title: "My Booking",
+      },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-mine",
+      payload: { title: "Change" },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/pending approval/);
+  });
+
+  it("admin cannot edit a completed booking", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: {
+        id: "booking-done",
+        status: "completed",
+        tenant_id: "tenant-a",
+        booked_by: "student-1",
+        resource_id: "res-1",
+        start_time: "2027-01-01T10:00:00Z",
+        end_time: "2027-01-01T12:00:00Z",
+        title: "Done",
+      },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-done",
+      payload: { title: "Rewrite History" },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/pending or approved/);
+  });
+
+  it("admin cannot edit a cancelled booking", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: {
+        id: "booking-gone",
+        status: "cancelled",
+        tenant_id: "tenant-a",
+        booked_by: "student-1",
+        resource_id: "res-1",
+        start_time: "2027-01-01T10:00:00Z",
+        end_time: "2027-01-01T12:00:00Z",
+        title: "Gone",
+      },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-gone",
+      payload: { title: "Resurrect" },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error.message).toMatch(/pending or approved/);
+  });
+});
+
+// ============================================================================
+// Security — ID manipulation protection
+// ============================================================================
+
+describe("Security — parameter manipulation", () => {
+  // REQ-20: Changing booking_id cannot bypass authorization
+  it("student cannot cancel another student's booking by guessing the ID", async () => {
+    signInAs(STUDENT);
+    // The cancel route filters by booked_by for non-admins,
+    // so the query returns nothing when booking belongs to another user.
+    supabase.queueResults({
+      data: null,
+      error: { message: "no rows" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-secret/cancel",
+    });
+
+    // Cancel is scoped to booked_by for non-admins — query finds nothing
+    expect(res.statusCode).toBe(404);
+  });
+
+  // REQ-24: Cross-tenant API access returns correct error
+  it("tenant admin gets 403 when accessing a cross-tenant booking detail", async () => {
+    signInAs(TENANT_ADMIN_B);
+    supabase.queueResults({
+      data: {
+        id: "booking-a-only",
+        tenant_id: "tenant-a",
+        booked_by: "student-1",
+        status: "pending",
+      },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/v1/bookings/booking-a-only",
+    });
+
+    expect(res.statusCode).toBe(403);
+  });
+
+  // REQ-23: Student cannot call admin booking endpoints
+  it("student cannot call the status change endpoint", async () => {
+    signInAs(STUDENT);
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1/status",
+      payload: { status: "approved" },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error.code).toBe("INSUFFICIENT_ROLE");
   });
 });
 

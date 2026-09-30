@@ -11,7 +11,7 @@ export function BookingDetailPage() {
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { claims } = useAuth();
+  const { claims, user: authUser } = useAuth();
   const { toast } = useToast();
   const isAdmin = claims?.app_role === 'main_admin' || claims?.app_role === 'tenant_admin';
 
@@ -60,7 +60,12 @@ export function BookingDetailPage() {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
           <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, wordBreak: 'break-word' }}>{booking.title}</h2>
-          {isAdmin && (
+          {isAdmin && (booking.status === 'pending' || booking.status === 'approved') && (
+            <button className="btn btn-outline btn-sm" onClick={() => setShowEdit(true)}>
+              <Edit2 size={16} /> Edit Booking
+            </button>
+          )}
+          {!isAdmin && booking.status === 'pending' && booking.booked_by === authUser?.uid && (
             <button className="btn btn-outline btn-sm" onClick={() => setShowEdit(true)}>
               <Edit2 size={16} /> Edit Booking
             </button>
