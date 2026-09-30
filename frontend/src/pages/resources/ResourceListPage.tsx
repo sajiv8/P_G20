@@ -16,6 +16,8 @@ interface Resource {
   created_by?: string;
   hourly_cost?: number;
   image_url?: string;
+  tenants?: { name: string };
+  creator?: { member_id?: string; full_name?: string };
 }
 
 const typeIcons: Record<string, any> = {
@@ -202,6 +204,16 @@ export function ResourceListPage() {
                     {r.description || `${(typeLabels[r.resource_type] || r.resource_type)} resource`}
                   </p>
                   <div className="card-hero-meta">
+                    {r.tenants?.name && (
+                      <span className="card-hero-meta-item" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontWeight: 500, fontSize: 'var(--font-size-xs)' }}>
+                        {r.tenants.name}
+                      </span>
+                    )}
+                    {r.category === 'ST_RESOURCE' && r.creator?.member_id && (
+                      <span className="card-hero-meta-item" style={{ background: 'rgba(168,85,247,0.1)', color: '#a855f7', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontWeight: 500, fontSize: 'var(--font-size-xs)' }}>
+                        Owner: {r.creator.member_id}
+                      </span>
+                    )}
                     {r.location && (
                       <span className="card-hero-meta-item"><MapPin size={12} /> {r.location}</span>
                     )}

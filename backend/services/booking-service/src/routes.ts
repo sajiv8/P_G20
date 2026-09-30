@@ -125,7 +125,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
 
       let query = supabase
         .from("bookings")
-        .select("*, resources(name, resource_type, location)", {
+        .select("*, resources(name, resource_type, location), tenants(name), booker:user_profiles!booked_by(member_id, full_name)", {
           count: "exact",
         });
 
