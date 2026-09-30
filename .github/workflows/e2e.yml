@@ -213,11 +213,7 @@ jobs:
       - name: ZAP baseline scan
         run: |
           mkdir -p tests/security/reports
-          docker run --rm --network host \
-            -v "$PWD/tests/security/reports:/zap/wrk:rw" \
-            zaproxy/zap-stable \
-            zap-baseline.py -t http://localhost \
-            -r zap-report.html -J zap-report.json -I
+          docker run --rm --network host -v "$PWD/tests/security/reports:/zap/wrk:rw" zaproxy/zap-stable zap-baseline.py -t http://localhost -r zap-report.html -J zap-report.json -I
 
       - name: Upload ZAP report
         if: always()
