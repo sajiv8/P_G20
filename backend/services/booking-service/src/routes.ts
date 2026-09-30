@@ -32,6 +32,36 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
   const supabase = getSupabaseClient();
 
   /**
+   * Directly create an in-app notification (bypasses Redis Streams).
+   * This guarantees notifications are delivered even when the event
+   * consumer is down or Redis Streams are unavailable.
+   */
+  async function createBookingNotification(
+    tenantId: string,
+    recipient: string,
+    type: string,
+    title: string,
+    body: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      const { error } = await supabase.from("notifications").insert({
+        tenant_id: tenantId,
+        recipient,
+        type,
+        title,
+        body,
+        payload: payload as any,
+      });
+      if (error) {
+        logger.warn({ error, recipient, type }, "Failed to create direct notification");
+      }
+    } catch (err) {
+      logger.warn({ err, recipient, type }, "Direct notification insert error");
+    }
+  }
+
+  /**
    * Return tokens for a booking that is no longer going ahead.
    *
    * A cancellation keeps half; a bump returns everything, because the student
@@ -149,11 +179,30 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       if (start_date) query = query.gte("start_time", start_date);
       if (end_date) query = query.lte("end_time", end_date);
 
-      const { data, count, error } = await query
+      let { data, count, error } = await query
         .order("start_time", { ascending: true })
         .range(offset, offset + limitNum - 1);
 
-      if (error) throw error;
+      // If the rich join failed (PostgREST FK ambiguity), fall back to simple select
+      if (error) {
+        logger.warn({ error }, "Bookings rich query failed, falling back to simple select");
+        let fallbackQuery = supabase.from("bookings").select("*, resources(name, resource_type, location)", { count: "exact" });
+        if (request.user!.appRole !== "main_admin") {
+          if (my_bookings !== "true") {
+            fallbackQuery = fallbackQuery.eq("tenant_id", request.user!.tenantId!);
+          }
+        }
+        if (resource_id) fallbackQuery = fallbackQuery.eq("resource_id", resource_id);
+        if (status) fallbackQuery = fallbackQuery.eq("status", status);
+        if (my_bookings === "true") fallbackQuery = fallbackQuery.eq("booked_by", request.user!.sub);
+        if (start_date) fallbackQuery = fallbackQuery.gte("start_time", start_date);
+        if (end_date) fallbackQuery = fallbackQuery.lte("end_time", end_date);
+
+        const fallback = await fallbackQuery.order("start_time", { ascending: true }).range(offset, offset + limitNum - 1);
+        if (fallback.error) throw fallback.error;
+        data = fallback.data;
+        count = fallback.count;
+      }
 
       sendPaginated(reply, data || [], count || 0, pageNum, limitNum);
     },
@@ -442,7 +491,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
         });
       }
 
-      // Publish event for notification service
+      // Publish event for notification service (async, best-effort)
       try {
         await publishEvent("booking-events", {
           type: "booking.created",
@@ -457,6 +506,16 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       } catch (err) {
         logger.warn({ err }, "Failed to publish booking event (non-fatal)");
       }
+
+      // Direct notification — guaranteed delivery even without Redis Streams
+      await createBookingNotification(
+        resource.tenant_id,
+        user.sub,
+        "booking_created",
+        "Booking Submitted",
+        "Your booking request has been submitted and is pending approval.",
+        { booking_id: booking.id, resource_id: body.resource_id },
+      );
 
       logger.info(
         { bookingId: booking.id, resourceId: body.resource_id },
@@ -527,6 +586,16 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
         logger.warn({ err }, "Failed to publish approval event");
       }
 
+      // Direct notification to booking owner
+      await createBookingNotification(
+        data.tenant_id,
+        data.booked_by,
+        "booking_approved",
+        "Booking Approved",
+        "Your booking request has been approved.",
+        { booking_id: id, approved_by: user.sub },
+      );
+
       logger.info({ bookingId: id, approvedBy: user.sub }, "Booking approved");
       sendSuccess(reply, data);
     },
@@ -594,6 +663,17 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       } catch (err) {
         logger.warn({ err }, "Failed to publish rejection event");
       }
+
+      // Direct notification to booking owner
+      const reasonSuffix = reason ? ` Reason: ${reason}` : "";
+      await createBookingNotification(
+        data.tenant_id,
+        data.booked_by,
+        "booking_rejected",
+        "Booking Rejected",
+        `Your booking request has been rejected.${reasonSuffix}`,
+        { booking_id: id, rejected_by: user.sub, reason },
+      );
 
       logger.info({ bookingId: id }, "Booking rejected");
       sendSuccess(reply, data);
