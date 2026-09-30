@@ -309,7 +309,9 @@ export function BookingListPage() {
                         Revert to Pending
                       </button>
                     )}
-                    {b.status !== "cancelled" && b.status !== "rejected" && (
+                    {(b.status === "pending" ||
+                      b.status === "approved" ||
+                      (isAdmin && b.status === "active")) && (
                       <button
                         className="btn btn-sm btn-ghost"
                         onClick={(e) => {

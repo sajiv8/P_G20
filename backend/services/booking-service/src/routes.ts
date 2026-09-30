@@ -686,6 +686,27 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
 
       if (fetchErr || !existing) throw ApiError.notFound("Booking");
 
+      // --- Status guard: only pending/approved bookings are editable ---
+      const isAdminRole =
+        user.appRole === "main_admin" || user.appRole === "tenant_admin";
+
+      if (isAdminRole) {
+        // Admins can edit pending and approved bookings
+        if (!["pending", "approved"].includes(existing.status)) {
+          throw ApiError.badRequest(
+            `Cannot edit a booking with status '${existing.status}'. Only pending or approved bookings can be edited.`,
+          );
+        }
+      } else {
+        // Normal users can only edit their own pending bookings
+        if (existing.status !== "pending") {
+          throw ApiError.badRequest(
+            "You can only edit bookings that are still pending approval.",
+          );
+        }
+      }
+
+      // --- Authorization ---
       if (user.appRole !== "main_admin") {
         if (user.appRole === "tenant_admin") {
           if (existing.tenant_id !== user.tenantId)
@@ -766,7 +787,23 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
 
   // ========================================================================
   // PUT /api/v1/bookings/:id/status — Change booking status (Admin only)
+  //
+  // Uses an explicit transition map rather than accepting arbitrary status
+  // values. This prevents dangerous transitions like completed→approved or
+  // rejected→active that would bypass the approval workflow.
   // ========================================================================
+
+  /** Safe administrative transitions. Terminal states have no outgoing edges. */
+  const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+    pending:   ["approved", "rejected", "cancelled"],
+    approved:  ["pending", "cancelled"],   // pending = revert accidental approval
+    active:    ["cancelled"],              // admin can cancel an in-progress booking
+    rejected:  [],                         // terminal
+    cancelled: [],                         // terminal
+    completed: [],                         // terminal
+    bumped:    [],                         // terminal
+  };
+
   server.put(
     "/api/v1/bookings/:id/status",
     {
@@ -780,18 +817,8 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       };
       const user = request.user!;
 
-      if (
-        !status ||
-        ![
-          "pending",
-          "approved",
-          "rejected",
-          "cancelled",
-          "completed",
-          "active",
-        ].includes(status)
-      ) {
-        throw ApiError.badRequest("Invalid or missing status");
+      if (!status) {
+        throw ApiError.badRequest("Missing status");
       }
 
       const { data: booking, error: fetchErr } = await supabase
@@ -802,6 +829,18 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
 
       if (fetchErr || !booking) throw ApiError.notFound("Booking");
 
+      // --- Transition validation ---
+      const allowed = ALLOWED_TRANSITIONS[booking.status];
+      if (!allowed || !allowed.includes(status)) {
+        throw ApiError.badRequest(
+          `Cannot change booking from '${booking.status}' to '${status}'. ` +
+          (allowed && allowed.length > 0
+            ? `Allowed transitions: ${allowed.join(", ")}.`
+            : `'${booking.status}' is a terminal state and cannot be changed.`),
+        );
+      }
+
+      // --- Tenant authorization ---
       if (user.appRole === "tenant_admin") {
         if (!user.tenantId)
           throw ApiError.forbidden(
@@ -865,6 +904,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
           payload: {
             booking_id: id,
             updated_by: user.sub,
+            previous_status: booking.status,
             new_status: status,
             reason,
           },
@@ -876,7 +916,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       }
 
       logger.info(
-        { bookingId: id, newStatus: status, updatedBy: user.sub },
+        { bookingId: id, previousStatus: booking.status, newStatus: status, updatedBy: user.sub },
         "Booking status changed",
       );
       sendSuccess(reply, data);
