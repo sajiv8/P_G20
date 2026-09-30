@@ -12,6 +12,7 @@ import {
   X as XIcon,
   Ban,
   CalendarDays,
+  User,
 } from "lucide-react";
 
 interface Booking {
@@ -26,6 +27,9 @@ interface Booking {
   resources?: { name: string };
   resource_id: string;
   created_at: string;
+  booked_by?: string;
+  tenants?: { name: string };
+  booker?: { member_id?: string; full_name?: string };
 }
 
 const statusConfig: Record<string, { class: string; label: string }> = {
@@ -271,6 +275,16 @@ export function BookingListPage() {
                       </span>
                       {(b.resource?.name || b.resources?.name) && (
                         <span>{b.resource?.name || b.resources?.name}</span>
+                      )}
+                      {b.tenants?.name && (
+                        <span style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', padding: '1px 6px', borderRadius: 'var(--radius-sm)', fontWeight: 500 }}>
+                          {b.tenants.name}
+                        </span>
+                      )}
+                      {isAdmin && b.booker?.member_id && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'rgba(168,85,247,0.1)', color: '#a855f7', padding: '1px 6px', borderRadius: 'var(--radius-sm)', fontWeight: 500 }}>
+                          <User size={10} /> {b.booker.member_id}
+                        </span>
                       )}
                     </div>
                   </div>

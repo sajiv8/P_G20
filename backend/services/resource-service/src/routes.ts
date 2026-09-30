@@ -31,7 +31,7 @@ export async function resourceRoutes(server: FastifyInstance): Promise<void> {
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
     const offset = (pageNum - 1) * limitNum;
 
-    let query = supabase.from('resources').select('*', { count: 'exact' });
+    let query = supabase.from('resources').select('*, tenants(name), creator:user_profiles!created_by(member_id, full_name)', { count: 'exact' });
 
     // Tenant scoping — only tenant_admin sees their own tenant's resources
     // All other users (students, lecturers, staff, main_admin) see all resources

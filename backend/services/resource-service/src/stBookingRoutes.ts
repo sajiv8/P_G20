@@ -120,16 +120,49 @@ export async function stBookingRoutes(server: FastifyInstance): Promise<void> {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // If token deduction already happened, attempt to refund
+      if (tokensDeducted > 0) {
+        try {
+          const { data: tb } = await supabase
+            .from('student_token_balances')
+            .select('id, balance')
+            .eq('firebase_uid', user.sub)
+            .single();
+          if (tb) {
+            await supabase
+              .from('student_token_balances')
+              .update({ balance: tb.balance + tokensDeducted })
+              .eq('id', tb.id);
+          }
+        } catch (_) { /* best-effort refund */ }
+      }
 
-    // Log token transaction
+      logger.error({ err: error, resource: id, borrower: user.sub }, 'ST borrow insert failed');
+
+      // Surface constraint violations as 400 instead of 500
+      const pgCode = (error as any).code;
+      if (pgCode === '23505') {
+        throw ApiError.badRequest('You already have a pending borrow for this item');
+      }
+      if (pgCode === '23514') {
+        throw ApiError.badRequest('Invalid borrow request — check your dates and item');
+      }
+      throw ApiError.badRequest(error.message || 'Failed to create borrow request');
+    }
+
+    // Log token transaction (non-fatal)
     if (tokensDeducted > 0) {
-      await supabase.from('token_transactions').insert({
-        firebase_uid: user.sub,
-        amount: -tokensDeducted,
-        type: 'booking_deduction',
-        description: `ST borrow: ${resource.name} (${tokensDeducted} tokens)`,
-      });
+      try {
+        await supabase.from('token_transactions').insert({
+          firebase_uid: user.sub,
+          amount: -tokensDeducted,
+          type: 'booking_deduction',
+          description: `ST borrow: ${resource.name} (${tokensDeducted} tokens)`,
+        });
+      } catch (txnErr) {
+        logger.warn({ err: txnErr, bookingId: booking.id }, 'Failed to log ST token transaction');
+      }
     }
 
     // Fetch owner contact details to return
@@ -271,7 +304,10 @@ export async function stBookingRoutes(server: FastifyInstance): Promise<void> {
       .select()
       .single();
 
-    if (error || !data) throw ApiError.notFound('Pending borrow request');
+    if (error || !data) {
+      logger.warn({ err: error, borrowId, user: user.sub }, 'ST approve failed');
+      throw ApiError.notFound('Pending borrow request (it may have already been approved, rejected, or cancelled)');
+    }
 
     // Notify borrower
     await notifySTBorrow(
@@ -305,7 +341,10 @@ export async function stBookingRoutes(server: FastifyInstance): Promise<void> {
       .select()
       .single();
 
-    if (error || !data) throw ApiError.notFound('Pending borrow request');
+    if (error || !data) {
+      logger.warn({ err: error, borrowId, user: user.sub }, 'ST reject failed');
+      throw ApiError.notFound('Pending borrow request (it may have already been approved, rejected, or cancelled)');
+    }
 
     // Refund tokens fully on rejection
     await refundTokens(supabase, data.borrower_uid, borrowId, 1.0);
@@ -342,7 +381,10 @@ export async function stBookingRoutes(server: FastifyInstance): Promise<void> {
       .select()
       .single();
 
-    if (error || !data) throw ApiError.notFound('Active borrow request');
+    if (error || !data) {
+      logger.warn({ err: error, borrowId, user: user.sub }, 'ST cancel failed — not found or not active');
+      throw ApiError.notFound('Active borrow request (it may have already been cancelled or returned)');
+    }
 
     // 50% refund on cancellation
     await refundTokens(supabase, user.sub, borrowId, 0.5);
@@ -378,7 +420,10 @@ export async function stBookingRoutes(server: FastifyInstance): Promise<void> {
       .select()
       .single();
 
-    if (error || !data) throw ApiError.notFound('Approved borrow to return');
+    if (error || !data) {
+      logger.warn({ err: error, borrowId, user: user.sub }, 'ST return failed — not found or not approved');
+      throw ApiError.notFound('Approved borrow to return (it may have been cancelled or already returned)');
+    }
 
     // Notify borrower
     await notifySTBorrow(
