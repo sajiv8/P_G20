@@ -251,16 +251,9 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
             );
           }
         }
-      } else {
-        if (
-          user.appRole !== "main_admin" &&
-          resource.tenant_id !== user.tenantId
-        ) {
-          throw ApiError.forbidden(
-            "Cannot book resources from another faculty",
-          );
-        }
       }
+      // Cross-tenant booking is allowed — any user can book any tenant's resource.
+      // The booking still stores resource.tenant_id for reporting.
 
       if (!resource.is_bookable)
         throw ApiError.badRequest("This resource is not bookable");

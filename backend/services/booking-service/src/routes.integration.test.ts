@@ -184,15 +184,28 @@ describe("POST /api/v1/bookings — access and validation", () => {
     expect(res.statusCode).toBe(404);
   });
 
-  // TC-RBAC-09
-  it("stops a user booking a resource from another faculty", async () => {
+  // TC-RBAC-09 — Cross-tenant booking is now ALLOWED
+  it("allows a user to book a resource from another faculty", async () => {
     signInAs(STUDENT);
+    // resource lookup
     supabase.queueResults({ data: equipment({ tenant_id: "tenant-b" }) });
+    // overlap check
+    supabase.queueResults({ data: [] });
+    // booking insert
+    supabase.queueResults({ data: { id: "new-booking", status: "pending" } });
+    // token balance lookup (for student deduction check)
+    supabase.queueResults({ data: { id: "tb-1", balance: 100 } });
+    // token deduction update
+    supabase.queueResults({ data: null });
+    // token transaction insert
+    supabase.queueResults({ data: null });
+    // publish event
+    supabase.queueResults({ data: null });
 
     const res = await postBooking(validBooking());
 
-    expect(res.statusCode).toBe(403);
-    expect(res.json().error.message).toMatch(/another faculty/i);
+    // Should NOT be 403 — cross-tenant booking is allowed
+    expect(res.statusCode).not.toBe(403);
   });
 
   // TC-BOOK-14

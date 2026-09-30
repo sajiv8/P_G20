@@ -41,6 +41,11 @@ export function ResourceListPage() {
   const isStudent = claims?.app_role === 'student';
   const isLecturerOrAbove = ['main_admin', 'tenant_admin', 'lecturer', 'junior_lecturer'].includes(claims?.app_role || '');
 
+  // Students only see equipment — lock the filter
+  useEffect(() => {
+    if (isStudent) setTypeFilter('equipment');
+  }, [isStudent]);
+
   useEffect(() => {
     api.get<Resource[]>('/resources/').then(res => {
       setResources(Array.isArray(res.data) ? res.data : []);
@@ -51,7 +56,9 @@ export function ResourceListPage() {
     const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.location?.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === 'all' || r.resource_type === typeFilter;
-    return matchSearch && matchType;
+    // Students can only see equipment resources
+    const matchStudentRestriction = !isStudent || r.resource_type === 'equipment';
+    return matchSearch && matchType && matchStudentRestriction;
   });
 
   const types = ['all', 'lab', 'lecture_hall', 'equipment', 'meeting_room', 'student_resource', 'other'];
@@ -123,13 +130,15 @@ export function ResourceListPage() {
           <Search size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
           <input className="input" placeholder="Search resources..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 40 }} />
         </div>
-        <div className="tabs" style={{ overflowX: 'auto' }}>
-          {types.map(t => (
-            <button key={t} className={`tab ${typeFilter === t ? 'tab-active' : ''}`} onClick={() => setTypeFilter(t)}>
-              {typeLabels[t] || t}
-            </button>
-          ))}
-        </div>
+        {!isStudent && (
+          <div className="tabs" style={{ overflowX: 'auto' }}>
+            {types.map(t => (
+              <button key={t} className={`tab ${typeFilter === t ? 'tab-active' : ''}`} onClick={() => setTypeFilter(t)}>
+                {typeLabels[t] || t}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {filtered.length === 0 ? (
