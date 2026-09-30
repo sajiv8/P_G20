@@ -23,6 +23,7 @@ build/
 .env.local
 .env.*.local
 backend/infra/.env
+backend/services/*/.env
 
 # Firebase service account keys
 **/firebase-service-account.json
