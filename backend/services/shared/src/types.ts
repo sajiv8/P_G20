@@ -10,6 +10,7 @@ export type AppRole = 'main_admin' | 'tenant_admin' | 'lecturer' | 'junior_lectu
 export interface UserClaims {
   sub: string;          // Firebase UID
   email?: string;
+  emailVerified?: boolean; // Firebase email_verified claim from ID token
   tenantId: string | null;
   appRole: AppRole;
   isBanned?: boolean;
@@ -86,10 +87,13 @@ export type ResourceEventType =
 
 export type UserEventType =
   | 'user.signup'
+  | 'user.verified'
   | 'user.banned'
   | 'user.unbanned'
   | 'user.deleted'
-  | 'user.role_changed';
+  | 'user.role_changed'
+  | 'user.email_verification_requested'
+  | 'user.password_reset_requested';
 
 export type OptimizationEventType =
   | 'optimization.scan';

@@ -625,6 +625,52 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
       return;
     }
 
+    // ── Email Verification ─────────────────────────────────────────────────
+    case 'user.email_verification_requested': {
+      const email = payload.email as string;
+      const link = payload.link as string;
+
+      if (!email || !link) {
+        logger.warn({ type, payload }, 'Verification event missing email or link');
+        return;
+      }
+
+      const html = buildEmailHtml({
+        title: 'Verify Your Email',
+        greeting: 'Welcome to CampusRSO!',
+        body: 'Please click the button below to verify your email address and activate your account.',
+        ctaText: 'Verify My Email',
+        ctaUrl: link,
+        footer: 'If you did not create an account, you can safely ignore this email.',
+      });
+      await sendEmail(email, 'Verify Your Email — CampusRSO', html);
+      logger.info({ emailDomain: email.split('@')[1] }, 'Verification email sent');
+      return;
+    }
+
+    // ── Password Reset ────────────────────────────────────────────────────
+    case 'user.password_reset_requested': {
+      const email = payload.email as string;
+      const link = payload.link as string;
+
+      if (!email || !link) {
+        logger.warn({ type, payload }, 'Password reset event missing email or link');
+        return;
+      }
+
+      const html = buildEmailHtml({
+        title: 'Reset Your Password',
+        greeting: 'Password Reset Requested',
+        body: 'Click the button below to reset your password. This link will expire in 1 hour.',
+        ctaText: 'Reset Password',
+        ctaUrl: link,
+        footer: 'If you did not request this, you can safely ignore this email. Your password will not change.',
+      });
+      await sendEmail(email, 'Reset Your Password — CampusRSO', html);
+      logger.info({ emailDomain: email.split('@')[1] }, 'Password reset email sent');
+      return;
+    }
+
     default:
       logger.debug({ type }, 'Unknown system event type — skipping');
   }

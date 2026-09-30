@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CampusRSO — Usability Test Participant Guide</title>
+<style>
+  @page { size: A4; margin: 14mm 15mm 16mm 15mm; }
+
+  :root {
+    --blue:    #3b82f6;
+    --blue-dk: #1d4ed8;
+    --purple:  #a855f7;
+    --amber:   #d97706;
+    --ink:     #111827;
+    --body:    #374151;
+    --muted:   #6b7280;
+    --line:    #e5e7eb;
+    --tint:    #f3f6fc;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    margin: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 9.6pt;
+    line-height: 1.5;
+    color: var(--body);
+  }
+
+  h1, h2, h3, h4 { color: var(--ink); margin: 0; font-weight: 700; }
+
+  /* ───────── masthead ───────── */
+  .masthead {
+    border-bottom: 2.5pt solid var(--blue);
+    padding-bottom: 6pt;
+    margin-bottom: 8pt;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12pt;
+  }
+  .masthead h1 { font-size: 19pt; letter-spacing: -0.4pt; line-height: 1.1; }
+  .masthead .sub { font-size: 9.6pt; color: var(--muted); margin-top: 3pt; }
+  .stamp {
+    flex: none;
+    text-align: right;
+    font-size: 7.6pt;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .stamp b { display: block; color: var(--blue-dk); font-size: 9pt; letter-spacing: 0.6pt; }
+
+  /* ───────── generic blocks ───────── */
+  h2.sec {
+    font-size: 11pt;
+    margin: 11pt 0 6pt;
+    padding-bottom: 2.5pt;
+    border-bottom: 1pt solid var(--line);
+  }
+  h2.sec:first-of-type { margin-top: 0; }
+  p { margin: 0 0 6pt; }
+  .lead { font-size: 10pt; }
+  strong { color: var(--ink); }
+
+  .fill {
+    display: inline-block;
+    min-width: 150pt;
+    padding: 1pt 7pt;
+    background: #fff8e1;
+    border: 1pt dashed var(--amber);
+    border-radius: 3pt;
+    color: var(--amber);
+    font-weight: 700;
+    font-size: 9pt;
+  }
+  .fill.sm {            /* short values: faculty codes, not URLs */
+    min-width: 0;
+    padding: 1pt 6pt;
+  }
+
+  /* ───────── the 3 steps ───────── */
+  .steps { display: flex; gap: 8pt; margin: 7pt 0 4pt; }
+  .step {
+    flex: 1;
+    border: 1pt solid var(--line);
+    border-top: 2.5pt solid var(--blue);
+    border-radius: 4pt;
+    padding: 7pt 9pt 8pt;
+    background: var(--tint);
+  }
+  .step .n {
+    font-size: 7pt; font-weight: 700; letter-spacing: 0.8pt;
+    color: var(--blue-dk); text-transform: uppercase;
+  }
+  .step h4 { font-size: 9.6pt; margin: 2pt 0 2pt; }
+  .step p  { font-size: 8.6pt; color: var(--muted); margin: 0; line-height: 1.4; }
+
+  /* ───────── info panel ───────── */
+  .panel {
+    border: 1pt solid var(--line);
+    border-left: 3pt solid var(--blue);
+    border-radius: 4pt;
+    background: var(--tint);
+    padding: 8pt 11pt;
+    margin: 7pt 0;
+  }
+  .panel.warn { border-left-color: var(--amber); background: #fffbeb; }
+  .panel h4 { font-size: 9.4pt; margin-bottom: 3pt; }
+  .panel p:last-child, .panel ul:last-child { margin-bottom: 0; }
+  .panel ol, .panel ul { margin: 0 0 5pt; padding-left: 15pt; }
+  .panel li { margin-bottom: 2.5pt; }
+
+  /* ───────── screen map ───────── */
+  .map {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 16pt;
+    margin: 6pt 0 2pt;
+  }
+  .map div {
+    padding: 3pt 0;
+    border-bottom: 0.6pt solid var(--line);
+    font-size: 9pt;
+  }
+  .map div:nth-last-child(-n+2) { border-bottom: none; }
+  .map b { color: var(--ink); }
+
+  /* ───────── task groups ───────── */
+  .group {
+    margin: 11pt 0 3pt;
+    padding: 5pt 10pt;
+    border-radius: 4pt;
+    background: var(--blue);
+    color: #fff;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .group.purple { background: var(--purple); }
+  .group.slate  { background: #475569; }
+  .group h3 { font-size: 10.4pt; color: #fff; }
+  .group .who { font-size: 8.2pt; opacity: 0.92; font-weight: 600; }
+
+  .task {
+    display: flex;
+    gap: 8pt;
+    padding: 6.5pt 0 6.5pt 2pt;
+    border-bottom: 0.6pt solid var(--line);
+    break-inside: avoid;
+  }
+  .task:last-of-type { border-bottom: none; }
+  .task .num {
+    flex: none;
+    width: 17pt; height: 17pt;
+    border-radius: 50%;
+    background: var(--tint);
+    border: 1pt solid var(--blue);
+    color: var(--blue-dk);
+    font-weight: 700;
+    font-size: 8.6pt;
+    text-align: center;
+    line-height: 15pt;
+  }
+  .purple-set .task .num { border-color: var(--purple); color: #7e22ce; background: #faf5ff; }
+  .slate-set  .task .num { border-color: #64748b;      color: #334155; background: #f1f5f9; }
+  .task .body { flex: 1; }
+  .task p  { margin: 0; font-size: 9.2pt; }
+  .tt { color: var(--ink); font-weight: 700; }
+  .done {
+    margin-top: 2.5pt !important;
+    font-size: 8.4pt !important;
+    color: var(--muted);
+  }
+  .done b { color: #15803d; font-weight: 700; }
+
+  .ui { /* on-screen label */
+    font-weight: 700;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  /* ───────── shared-login box ───────── */
+  .creds { border-collapse: collapse; margin: 3pt 0 0; }
+  .creds td { padding: 2pt 14pt 2pt 0; font-size: 9.2pt; }
+  .creds td.k { font-weight: 700; color: var(--ink); width: 58pt; }
+  .creds td:last-child {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 8.8pt;
+    color: #92400e;
+  }
+
+  /* ───────── troubleshooting ───────── */
+  .tshoot { width: 100%; border-collapse: collapse; margin: 5pt 0 2pt; }
+  .tshoot td { padding: 4pt 6pt 4pt 0; border-bottom: 0.6pt solid var(--line); vertical-align: top; font-size: 9pt; }
+  .tshoot td.q { width: 112pt; font-weight: 700; color: var(--ink); }
+  .tshoot tr:last-child td { border-bottom: none; }
+
+  /* ───────── closing ───────── */
+  .closing {
+    margin-top: 12pt;
+    border: 1.5pt solid var(--blue);
+    border-radius: 5pt;
+    overflow: hidden;
+    break-inside: avoid;
+  }
+  .closing .hd {
+    background: var(--blue);
+    color: #fff;
+    padding: 5pt 11pt;
+    font-weight: 700;
+    font-size: 10.4pt;
+  }
+  .closing .bd { padding: 9pt 11pt; }
+
+  .foot {
+    margin-top: 10pt;
+    padding-top: 5pt;
+    border-top: 0.6pt solid var(--line);
+    font-size: 7.8pt;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  .pagebreak { break-before: page; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ PAGE 1 ══════════════════ -->
+<div class="masthead">
+  <div>
+    <h1>CampusRSO — Participant Guide</h1>
+    <div class="sub">Usability test &amp; task sheet for the Campus Resource Sharing Platform</div>
+  </div>
+  <div class="stamp">
+    <b>BETA TEST</b>
+    About 15 minutes<br>
+    Laptop or phone<br>
+    Version 1.0
+  </div>
+</div>
+
+<h2 class="sec">What you are testing</h2>
+<p class="lead">CampusRSO is a booking platform for shared university facilities. Each faculty runs its own
+halls, labs and equipment, students lend their own things to each other for tokens, and the system sorts out
+clashes and approvals.</p>
+<p>We are not testing you — we are testing whether the interface makes sense first time round. Where you get
+stuck or annoyed is exactly what we need to hear.</p>
+
+<div class="steps">
+  <div class="step">
+    <div class="n">Step 1</div>
+    <h4>Create an account</h4>
+    <p>Sign up with your faculty code and verify your email.</p>
+  </div>
+  <div class="step">
+    <div class="n">Step 2</div>
+    <h4>Work through the tasks</h4>
+    <p>Do them in order, at your normal pace. Skip any that will not work for you.</p>
+  </div>
+  <div class="step">
+    <div class="n">Step 3</div>
+    <h4>Fill the feedback form</h4>
+    <p>Ten quick statements plus a few open questions. Two minutes.</p>
+  </div>
+</div>
+
+<h2 class="sec">Getting in</h2>
+<div class="panel">
+  <h4>Open the system</h4>
+  <p><span class="fill">__SYSTEM_URL__</span></p>
+  <h4 style="margin-top:6pt">Sign up</h4>
+  <ol>
+    <li>Click <span class="ui">Create Account</span>, then fill in your name, email and a password of at least 6 characters.</li>
+    <li>Enter a <strong>faculty code</strong> — either <span class="fill sm">__FACULTY_CODE_A__</span> or
+        <span class="fill sm">__FACULTY_CODE_B__</span>. They are two different faculties, so pick one.</li>
+    <li>Enter your <strong>Member ID</strong> — your student or staff number, for example <em>230571F</em>.</li>
+    <li>Open the verification email and click the link, then sign back in.</li>
+  </ol>
+  <p style="font-size:8.6pt;color:#6b7280">Use an inbox you can open now — the mail lands in seconds, so check
+  spam if it does not. Signing in with Google also works.</p>
+</div>
+
+<h2 class="sec">Finding your way around</h2>
+<p>Everything runs off the left sidebar on a laptop, or the bar along the bottom on a phone.</p>
+<div class="map">
+  <div><b>Dashboard</b> — your stats and shortcuts</div>
+  <div><b>Notifications</b> — approvals and reminders</div>
+  <div><b>Resources</b> — halls, labs and equipment</div>
+  <div><b>Profile</b> — your details and photo</div>
+  <div><b>ST Resource</b> — items students lend out</div>
+  <div><b>Token count</b> — top bar, students only</div>
+  <div><b>ST Borrows</b> — what you borrowed and lent</div>
+  <div><b>Chat bubble</b> — bottom right, ask it anything</div>
+  <div><b>Bookings</b> — yours, sorted by status</div>
+  <div></div>
+</div>
+
+<h2 class="sec">Before you start</h2>
+<div class="panel warn">
+  <ul>
+    <li>Only edit or delete things you created. Other testers share your faculty.</li>
+    <li>Keep booking titles and item descriptions free of anything private — others see them.</li>
+    <li>If something errors, note what you clicked and move on to the next task.</li>
+    <li>Do not ask for help. Not finding something is a result, not a failure.</li>
+  </ul>
+</div>
+
+
+<!-- ══════════════════ PAGE 2 ══════════════════ -->
+<div class="pagebreak"></div>
+
+<h2 class="sec" style="margin-top:0">Your tasks</h2>
+<p>Work down the list in order. Each task says what to do and how to tell you are finished. Do not worry about
+getting it wrong — where you hesitate is useful information.</p>
+
+<div class="group">
+  <h3>Part A · The basics</h3>
+  <span class="who">Everyone</span>
+</div>
+
+<div class="task">
+  <div class="num">1</div>
+  <div class="body">
+    <p><b class="tt">Get your bearings.</b> Sign in and look over the dashboard — the number cards and the <span class="ui">Recent Bookings</span> list.</p>
+    <p class="done"><b>Done when</b> you can say what the dashboard is telling you.</p>
+  </div>
+</div>
+
+<div class="task">
+  <div class="num">2</div>
+  <div class="body">
+    <p><b class="tt">Find a specific resource.</b> In <span class="ui">Resources</span>, find a hall or lab that holds at least 30 people. Try the search box.</p>
+    <p class="done"><b>Done when</b> you have one open on screen.</p>
+  </div>
+</div>
+
+<div class="task">
+  <div class="num">3</div>
+  <div class="body">
+    <p><b class="tt">Check when it is free.</b> On that page, scroll to <span class="ui">Today's Schedule</span> and see what is already booked.</p>
+    <p class="done"><b>Done when</b> you know whether it is free this afternoon.</p>
+  </div>
+</div>
+
+<div class="task">
+  <div class="num">4</div>
+  <div class="body">
+    <p><b class="tt">Book it.</b> Click <span class="ui">New Booking</span> and work the three steps — resource, date and time, then a title and headcount.</p>
+    <p class="done"><b>Done when</b> the confirmation appears and the booking is listed as <em>Pending</em>.</p>
+  </div>
+</div>
+
+<div class="task">
+  <div class="num">5</div>
+  <div class="body">
+    <p><b class="tt">Try to double-book.</b> Now book the same resource again for the same time slot. The system should stop you.</p>
+    <p class="done"><b>Done when</b> you see the clash warning. Note whether it made sense to you.</p>
+  </div>
+</div>
+
+<div class="task">
+  <div class="num">6</div>
+  <div class="body">
+    <p><b class="tt">Find your booking and cancel it.</b> In <span class="ui">Bookings</span>, use the status tabs to find the one you made, open it and cancel it.</p>
+    <p class="done"><b>Done when</b> its status reads <em>Cancelled</em>.</p>
+  </div>
+</div>
+
+<div class="task">
+  <div class="num">7</div>
+  <div class="body">
+    <p><b class="tt">Check your notifications.</b> Open <span class="ui">Notifications</span>, read what is there and click <span class="ui">Mark All Read</span>.</p>
+    <p class="done"><b>Done when</b> the unread badge is gone.</p>
+  </div>
+</div>
+
+<div class="task">
+  <div class="num">8</div>
+  <div class="body">
+    <p><b class="tt">Update your profile.</b> In <span class="ui">Profile</span>, change your mobile number and upload a photo. It will ask you to crop it.</p>
+    <p class="done"><b>Done when</b> your new photo shows in the top bar.</p>
+  </div>
+</div>
+
+<div class="task">
+  <div class="num">9</div>
+  <div class="body">
+    <p><b class="tt">Ask the assistant something.</b> Open the chat bubble, bottom right, and ask it a real question. Sinhala works.</p>
+    <p class="done"><b>Done when</b> you have read its answer and formed an opinion of it.</p>
+  </div>
+</div>
+
+<div class="group purple">
+  <h3>Part B · Lending between students</h3>
+  <span class="who">Students only — skip if you signed up as staff</span>
+</div>
+
+<div class="purple-set">
+  <div class="task">
+    <div class="num">10</div>
+    <div class="body">
+      <p><b class="tt">Check your token balance.</b> Find the token count in the top bar. Tokens are what you spend to borrow things.</p>
+      <p class="done"><b>Done when</b> you know how many you have.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="num">11</div>
+    <div class="body">
+      <p><b class="tt">Put one of your own items up.</b> In <span class="ui">ST Resource</span>, click <span class="ui">Share My Item</span>. Set a condition and an hourly token cost.</p>
+      <p class="done"><b>Done when</b> it shows up under the <span class="ui">My Items</span> tab.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="num">12</div>
+    <div class="body">
+      <p><b class="tt">Borrow something from someone else.</b> Under <span class="ui">All Items</span>, request one that is not yours. Check the token cost before confirming.</p>
+      <p class="done"><b>Done when</b> the request is in and you have seen what it will cost.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="num">13</div>
+    <div class="body">
+      <p><b class="tt">Look at both sides of a loan.</b> In <span class="ui">ST Borrows</span>, switch between <span class="ui">My Borrows</span> and <span class="ui">Lent Out</span>. Approve a request, mark one returned.</p>
+      <p class="done"><b>Done when</b> you can tell the two tabs apart without thinking.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PAGE 3 ══════════════════ -->
+<div class="pagebreak"></div>
+
+<div class="group slate" style="margin-top:0">
+  <h3>Part C · Running a faculty</h3>
+  <span class="who">Faculty admin testers only</span>
+</div>
+<p style="font-size:8.8pt;color:#6b7280;margin:5pt 0 0">Only do this part if the team asked you to. Everyone
+else stops after Part B and goes straight to the form.</p>
+
+<div class="panel warn admin-only" style="margin-top:6pt">
+  <h4>Sign out, then sign back in with the shared admin account</h4>
+  <table class="creds">
+    <tr><td class="k">Email</td><td>__ADMIN_EMAIL__</td></tr>
+    <tr><td class="k">Password</td><td>__ADMIN_PW__</td></tr>
+  </table>
+  <p style="font-size:8.6pt;margin:5pt 0 0">Every admin tester shares this one login and it touches real data.
+  Add and edit your own entries freely, but <strong>do not delete resources, suspend anyone, or change roles</strong>.
+  Sign out again when you finish.</p>
+</div>
+
+<div class="slate-set">
+  <div class="task">
+    <div class="num">14</div>
+    <div class="body">
+      <p><b class="tt">Add a resource.</b> From <span class="ui">Resources</span>, add a lab or piece of equipment with a name, location and capacity.</p>
+      <p class="done"><b>Done when</b> it appears in the list for everyone in your faculty.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="num">15</div>
+    <div class="body">
+      <p><b class="tt">Clear the approval queue.</b> In <span class="ui">Bookings</span>, filter to <span class="ui">Pending</span>. Approve one, reject another with a reason.</p>
+      <p class="done"><b>Done when</b> both have moved out of the pending tab.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="num">16</div>
+    <div class="body">
+      <p><b class="tt">Edit a resource.</b> Open any resource you own and change its capacity or description.</p>
+      <p class="done"><b>Done when</b> the change shows on the resource page.</p>
+    </div>
+  </div>
+
+  <div class="task">
+    <div class="num">17</div>
+    <div class="body">
+      <p><b class="tt">Look at your users.</b> Open <span class="ui">Users</span> under Admin. Do not change roles or suspend anyone unless asked to.</p>
+      <p class="done"><b>Done when</b> you have seen who is in your faculty and what role they hold.</p>
+    </div>
+  </div>
+</div>
+
+<h2 class="sec">If you get stuck</h2>
+<table class="tshoot">
+  <tr><td class="q">No verification email</td>
+      <td>Check spam. On the verify screen, click <span class="ui">Resend</span>. Gmail is the most reliable.</td></tr>
+  <tr><td class="q">Faculty code rejected</td>
+      <td>It is case sensitive. Copy it from this sheet rather than typing it.</td></tr>
+  <tr><td class="q">No resources listed</td>
+      <td>You may be in a faculty with nothing set up yet. Tell the team and stop there.</td></tr>
+  <tr><td class="q">Not enough tokens</td>
+      <td>Pick a cheaper item or a shorter slot. Note it in the form — it is useful to know.</td></tr>
+  <tr><td class="q">A page will not load</td>
+      <td>Refresh once. If it still fails, note the page and carry on.</td></tr>
+</table>
+
+<div class="closing">
+  <div class="hd">Last step — the feedback form</div>
+  <div class="bd">
+    <p>Fill this in as soon as you finish, while it is fresh:</p>
+    <p style="margin-bottom:7pt"><span class="fill">__SUS_FORM_URL__</span></p>
+    <p style="margin-bottom:0">Ten statements to rate from strongly disagree to strongly agree, then a few open
+    questions. Go with your first instinct on the ten — that is how the scale is meant to be used. The open
+    questions are what tell us how to fix things, so be as blunt as you like.</p>
+  </div>
+</div>
+
+<p style="margin-top:9pt">Thank you for the time. Your responses stay anonymous and are used only to evaluate
+this project.</p>
+
+<div class="foot">
+  CampusRSO · Multi-Tenant Campus Resource Sharing Platform · Usability evaluation using the System Usability
+  Scale (Brooke, 1996)
+</div>
+
+</body>
+</html>
