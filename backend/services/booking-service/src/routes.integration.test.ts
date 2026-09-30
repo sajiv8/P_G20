@@ -6,27 +6,40 @@
  * for real. Only the two outside systems are faked: Supabase and Firebase.
  */
 
-import type { FastifyInstance } from 'fastify';
-import { getSupabaseClient, publishEvent } from '@rso/shared';
-import { buildServer } from './server';
-import { createSupabaseMock } from './test-helpers/supabase-mock';
-import { authState, signInAs, signOut, TestUser } from './test-helpers/auth-state';
+import type { FastifyInstance } from "fastify";
+import { getSupabaseClient, publishEvent } from "@rso/shared";
+import { buildServer } from "./server";
+import { createSupabaseMock } from "./test-helpers/supabase-mock";
+import {
+  authState,
+  signInAs,
+  signOut,
+  TestUser,
+} from "./test-helpers/auth-state";
 
-jest.mock('@rso/shared', () => {
-  const actual = jest.requireActual('@rso/shared');
-  const { authState: state } = jest.requireActual('./test-helpers/auth-state');
+jest.mock("@rso/shared", () => {
+  const actual = jest.requireActual("@rso/shared");
+  const { authState: state } = jest.requireActual("./test-helpers/auth-state");
 
   return {
     ...actual,
     // Faked: the outside world.
     getSupabaseClient: jest.fn(),
     publishEvent: jest.fn().mockResolvedValue(undefined),
-    logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+    logger: {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+    },
     authMiddleware: jest.fn(async (request: any, reply: any) => {
       if (!state.user) {
         reply.code(401).send({
           success: false,
-          error: { code: 'AUTH_MISSING_TOKEN', message: 'Authorization header with Bearer token is required' },
+          error: {
+            code: "AUTH_MISSING_TOKEN",
+            message: "Authorization header with Bearer token is required",
+          },
         });
         return;
       }
@@ -38,17 +51,32 @@ jest.mock('@rso/shared', () => {
 
 const supabase = createSupabaseMock();
 
-const STUDENT: TestUser = { sub: 'student-1', email: 's1@test.local', tenantId: 'tenant-a', appRole: 'student' };
-const LECTURER: TestUser = { sub: 'lecturer-1', email: 'l1@test.local', tenantId: 'tenant-a', appRole: 'lecturer' };
-const TENANT_ADMIN: TestUser = { sub: 'admin-1', email: 'a1@test.local', tenantId: 'tenant-a', appRole: 'tenant_admin' };
+const STUDENT: TestUser = {
+  sub: "student-1",
+  email: "s1@test.local",
+  tenantId: "tenant-a",
+  appRole: "student",
+};
+const LECTURER: TestUser = {
+  sub: "lecturer-1",
+  email: "l1@test.local",
+  tenantId: "tenant-a",
+  appRole: "lecturer",
+};
+const TENANT_ADMIN: TestUser = {
+  sub: "admin-1",
+  email: "a1@test.local",
+  tenantId: "tenant-a",
+  appRole: "tenant_admin",
+};
 
 /** A bookable, available piece of equipment in tenant-a. */
 const equipment = (overrides: Record<string, unknown> = {}) => ({
-  id: 'resource-1',
-  tenant_id: 'tenant-a',
+  id: "resource-1",
+  tenant_id: "tenant-a",
   is_bookable: true,
-  status: 'available',
-  category: 'EQUIPMENT',
+  status: "available",
+  category: "EQUIPMENT",
   allowed_roles: null,
   hourly_cost: null,
   ...overrides,
@@ -56,13 +84,13 @@ const equipment = (overrides: Record<string, unknown> = {}) => ({
 
 /** A two-hour window, well into the future. */
 const TWO_HOUR_SLOT = {
-  start_time: '2027-03-01T10:00:00.000Z',
-  end_time: '2027-03-01T12:00:00.000Z',
+  start_time: "2027-03-01T10:00:00.000Z",
+  end_time: "2027-03-01T12:00:00.000Z",
 };
 
 const validBooking = (overrides: Record<string, unknown> = {}) => ({
-  resource_id: 'resource-1',
-  title: 'Test Booking',
+  resource_id: "resource-1",
+  title: "Test Booking",
   ...TWO_HOUR_SLOT,
   ...overrides,
 });
@@ -85,31 +113,37 @@ afterEach(async () => {
 });
 
 const postBooking = (payload: Record<string, unknown>) =>
-  app.inject({ method: 'POST', url: '/api/v1/bookings', payload });
+  app.inject({ method: "POST", url: "/api/v1/bookings", payload });
 
-describe('GET /health', () => {
-  it('reports the service as ok without authentication', async () => {
-    const res = await app.inject({ method: 'GET', url: '/health' });
+describe("GET /health", () => {
+  it("reports the service as ok without authentication", async () => {
+    const res = await app.inject({ method: "GET", url: "/health" });
 
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ status: 'ok', service: 'booking-service' });
+    expect(res.json()).toMatchObject({
+      status: "ok",
+      service: "booking-service",
+    });
   });
 });
 
-describe('POST /api/v1/bookings — access and validation', () => {
+describe("POST /api/v1/bookings — access and validation", () => {
   // TC-AUTH-14
-  it('rejects an unauthenticated request with 401', async () => {
+  it("rejects an unauthenticated request with 401", async () => {
     const res = await postBooking(validBooking());
 
     expect(res.statusCode).toBe(401);
-    expect(res.json().error.code).toBe('AUTH_MISSING_TOKEN');
+    expect(res.json().error.code).toBe("AUTH_MISSING_TOKEN");
   });
 
   // TC-BOOK-13
-  it('rejects a request with no title', async () => {
+  it("rejects a request with no title", async () => {
     signInAs(STUDENT);
 
-    const res = await postBooking({ resource_id: 'resource-1', ...TWO_HOUR_SLOT });
+    const res = await postBooking({
+      resource_id: "resource-1",
+      ...TWO_HOUR_SLOT,
+    });
 
     expect(res.statusCode).toBe(400);
     expect(res.json().error.message).toMatch(/required/i);
@@ -117,29 +151,31 @@ describe('POST /api/v1/bookings — access and validation', () => {
   });
 
   // TC-BOOK-12 / D-04 — rejected before any database call is made.
-  it('rejects a booking whose end is before its start', async () => {
+  it("rejects a booking whose end is before its start", async () => {
     signInAs(STUDENT);
 
-    const res = await postBooking(validBooking({
-      start_time: '2027-03-01T12:00:00.000Z',
-      end_time: '2027-03-01T10:00:00.000Z',
-    }));
+    const res = await postBooking(
+      validBooking({
+        start_time: "2027-03-01T12:00:00.000Z",
+        end_time: "2027-03-01T10:00:00.000Z",
+      }),
+    );
 
     expect(res.statusCode).toBe(400);
     expect(res.json().error.message).toMatch(/after start_time/);
     expect(supabase.calls).toHaveLength(0);
   });
 
-  it('rejects a booking with an unparseable date', async () => {
+  it("rejects a booking with an unparseable date", async () => {
     signInAs(STUDENT);
 
-    const res = await postBooking(validBooking({ end_time: 'next tuesday' }));
+    const res = await postBooking(validBooking({ end_time: "next tuesday" }));
 
     expect(res.statusCode).toBe(400);
     expect(supabase.calls).toHaveLength(0);
   });
 
-  it('returns 404 when the resource does not exist', async () => {
+  it("returns 404 when the resource does not exist", async () => {
     signInAs(STUDENT);
     supabase.queueResults({ data: null });
 
@@ -149,9 +185,9 @@ describe('POST /api/v1/bookings — access and validation', () => {
   });
 
   // TC-RBAC-09
-  it('stops a user booking a resource from another faculty', async () => {
+  it("stops a user booking a resource from another faculty", async () => {
     signInAs(STUDENT);
-    supabase.queueResults({ data: equipment({ tenant_id: 'tenant-b' }) });
+    supabase.queueResults({ data: equipment({ tenant_id: "tenant-b" }) });
 
     const res = await postBooking(validBooking());
 
@@ -160,7 +196,7 @@ describe('POST /api/v1/bookings — access and validation', () => {
   });
 
   // TC-BOOK-14
-  it('rejects a resource that is not bookable', async () => {
+  it("rejects a resource that is not bookable", async () => {
     signInAs(STUDENT);
     supabase.queueResults({ data: equipment({ is_bookable: false }) });
 
@@ -171,9 +207,9 @@ describe('POST /api/v1/bookings — access and validation', () => {
   });
 
   // TC-BOOK-15
-  it('rejects a resource that is under maintenance', async () => {
+  it("rejects a resource that is under maintenance", async () => {
     signInAs(STUDENT);
-    supabase.queueResults({ data: equipment({ status: 'maintenance' }) });
+    supabase.queueResults({ data: equipment({ status: "maintenance" }) });
 
     const res = await postBooking(validBooking());
 
@@ -182,9 +218,9 @@ describe('POST /api/v1/bookings — access and validation', () => {
   });
 
   // TC-BOOK-03
-  it('stops a student booking a lecture hall', async () => {
+  it("stops a student booking a lecture hall", async () => {
     signInAs(STUDENT);
-    supabase.queueResults({ data: equipment({ category: 'LECTURE_HALL' }) });
+    supabase.queueResults({ data: equipment({ category: "LECTURE_HALL" }) });
 
     const res = await postBooking(validBooking());
 
@@ -193,10 +229,13 @@ describe('POST /api/v1/bookings — access and validation', () => {
   });
 
   // TC-BOOK-16
-  it('enforces allowed_roles on a global resource', async () => {
+  it("enforces allowed_roles on a global resource", async () => {
     signInAs(STUDENT);
     supabase.queueResults({
-      data: equipment({ tenant_id: null, allowed_roles: ['lecturer', 'tenant_admin'] }),
+      data: equipment({
+        tenant_id: null,
+        allowed_roles: ["lecturer", "tenant_admin"],
+      }),
     });
 
     const res = await postBooking(validBooking());
@@ -206,61 +245,65 @@ describe('POST /api/v1/bookings — access and validation', () => {
   });
 });
 
-describe('POST /api/v1/bookings — priority and conflicts', () => {
+describe("POST /api/v1/bookings — priority and conflicts", () => {
   // TC-BOOK-01
-  it('creates a student booking as pending', async () => {
+  it("creates a student booking as pending", async () => {
     signInAs(STUDENT);
     supabase.queueResults(
       { data: equipment() },
       { data: [] },
-      { data: { id: 'booking-1', status: 'pending' } },
+      { data: { id: "booking-1", status: "pending" } },
     );
 
     const res = await postBooking(validBooking());
 
     expect(res.statusCode).toBe(201);
-    expect(res.json().data.id).toBe('booking-1');
-    expect(supabase.findCall('bookings', 'insert')?.payload).toMatchObject({ status: 'pending' });
+    expect(res.json().data.id).toBe("booking-1");
+    expect(supabase.findCall("bookings", "insert")?.payload).toMatchObject({
+      status: "pending",
+    });
   });
 
   // TC-BOOK-02
-  it('auto-approves a lecturer booking', async () => {
+  it("auto-approves a lecturer booking", async () => {
     signInAs(LECTURER);
     supabase.queueResults(
       { data: equipment() },
       { data: [] },
-      { data: { id: 'booking-2', status: 'approved' } },
+      { data: { id: "booking-2", status: "approved" } },
     );
 
     const res = await postBooking(validBooking());
 
     expect(res.statusCode).toBe(201);
-    expect(supabase.findCall('bookings', 'insert')?.payload).toMatchObject({ status: 'approved' });
+    expect(supabase.findCall("bookings", "insert")?.payload).toMatchObject({
+      status: "approved",
+    });
   });
 
   // TC-BOOK-04
-  it('returns 409 when an equal-priority booking already holds the slot', async () => {
+  it("returns 409 when an equal-priority booking already holds the slot", async () => {
     signInAs(STUDENT);
     supabase.queueResults(
       { data: equipment() },
-      { data: [{ id: 'booking-0', booked_by: 'student-9' }] },
-      { data: [{ firebase_uid: 'student-9', role: 'student' }] },
+      { data: [{ id: "booking-0", booked_by: "student-9" }] },
+      { data: [{ firebase_uid: "student-9", role: "student" }] },
     );
 
     const res = await postBooking(validBooking());
 
     expect(res.statusCode).toBe(409);
     expect(res.json().error.message).toMatch(/equal or higher priority/i);
-    expect(supabase.findCall('bookings', 'insert')).toBeUndefined();
+    expect(supabase.findCall("bookings", "insert")).toBeUndefined();
   });
 
   // TC-BOOK-06
-  it('returns 409 when a student tries to take a lecturer’s slot', async () => {
+  it("returns 409 when a student tries to take a lecturer’s slot", async () => {
     signInAs(STUDENT);
     supabase.queueResults(
       { data: equipment() },
-      { data: [{ id: 'booking-0', booked_by: 'lecturer-9' }] },
-      { data: [{ firebase_uid: 'lecturer-9', role: 'lecturer' }] },
+      { data: [{ id: "booking-0", booked_by: "lecturer-9" }] },
+      { data: [{ firebase_uid: "lecturer-9", role: "lecturer" }] },
     );
 
     const res = await postBooking(validBooking());
@@ -269,36 +312,38 @@ describe('POST /api/v1/bookings — priority and conflicts', () => {
   });
 
   // TC-BOOK-05
-  it('lets a lecturer bump a student and marks the old booking bumped', async () => {
+  it("lets a lecturer bump a student and marks the old booking bumped", async () => {
     signInAs(LECTURER);
     supabase.queueResults(
       { data: equipment() },
-      { data: [{ id: 'booking-0', booked_by: 'student-9' }] },
-      { data: [{ firebase_uid: 'student-9', role: 'student' }] },
+      { data: [{ id: "booking-0", booked_by: "student-9" }] },
+      { data: [{ firebase_uid: "student-9", role: "student" }] },
       { data: null },
-      { data: { id: 'booking-3', status: 'approved' } },
+      { data: { id: "booking-3", status: "approved" } },
     );
 
     const res = await postBooking(validBooking());
 
     expect(res.statusCode).toBe(201);
-    expect(supabase.findCall('bookings', 'update')?.payload).toEqual({ status: 'bumped' });
+    expect(supabase.findCall("bookings", "update")?.payload).toEqual({
+      status: "bumped",
+    });
   });
 
-  it('does not bump anyone when one of several overlaps outranks the requester', async () => {
+  it("does not bump anyone when one of several overlaps outranks the requester", async () => {
     signInAs(LECTURER);
     supabase.queueResults(
       { data: equipment() },
       {
         data: [
-          { id: 'booking-a', booked_by: 'student-9' },
-          { id: 'booking-b', booked_by: 'admin-9' },
+          { id: "booking-a", booked_by: "student-9" },
+          { id: "booking-b", booked_by: "admin-9" },
         ],
       },
       {
         data: [
-          { firebase_uid: 'student-9', role: 'student' },
-          { firebase_uid: 'admin-9', role: 'main_admin' },
+          { firebase_uid: "student-9", role: "student" },
+          { firebase_uid: "admin-9", role: "main_admin" },
         ],
       },
     );
@@ -306,20 +351,20 @@ describe('POST /api/v1/bookings — priority and conflicts', () => {
     const res = await postBooking(validBooking());
 
     expect(res.statusCode).toBe(409);
-    expect(supabase.findCall('bookings', 'update')).toBeUndefined();
-    expect(supabase.findCall('bookings', 'insert')).toBeUndefined();
+    expect(supabase.findCall("bookings", "update")).toBeUndefined();
+    expect(supabase.findCall("bookings", "insert")).toBeUndefined();
   });
 
   // TC-TOK-07 / D-02 regression: a displaced student must get their tokens back.
-  it('refunds the full charge to a student it bumps', async () => {
+  it("refunds the full charge to a student it bumps", async () => {
     signInAs(LECTURER);
     supabase.queueResults(
       { data: equipment({ hourly_cost: 10 }) },
-      { data: [{ id: 'booking-0', booked_by: 'student-9' }] },
-      { data: [{ firebase_uid: 'student-9', role: 'student' }] },
+      { data: [{ id: "booking-0", booked_by: "student-9" }] },
+      { data: [{ firebase_uid: "student-9", role: "student" }] },
       { data: null }, // bump update
-      { data: { id: 'booking-9', status: 'approved' } }, // insert
-      { data: { id: 'balance-9', balance: 50 } }, // displaced student's balance
+      { data: { id: "booking-9", status: "approved" } }, // insert
+      { data: { id: "balance-9", balance: 50 } }, // displaced student's balance
       { data: { amount: -20 } }, // their original deduction
       { data: [] }, // no prior refund
       { data: null }, // balance update
@@ -330,40 +375,46 @@ describe('POST /api/v1/bookings — priority and conflicts', () => {
 
     expect(res.statusCode).toBe(201);
     // The whole 20 comes back, not half: 50 + 20 = 70.
-    expect(supabase.findCall('student_token_balances', 'update')?.payload).toEqual({ balance: 70 });
-    expect(supabase.findCall('token_transactions', 'insert')?.payload).toMatchObject({
-      firebase_uid: 'student-9',
-      booking_id: 'booking-0',
+    expect(
+      supabase.findCall("student_token_balances", "update")?.payload,
+    ).toEqual({ balance: 70 });
+    expect(
+      supabase.findCall("token_transactions", "insert")?.payload,
+    ).toMatchObject({
+      firebase_uid: "student-9",
+      booking_id: "booking-0",
       amount: 20,
-      type: 'booking_refund',
+      type: "booking_refund",
     });
   });
 
-  it('does not refund a bumped booking twice', async () => {
+  it("does not refund a bumped booking twice", async () => {
     signInAs(LECTURER);
     supabase.queueResults(
       { data: equipment({ hourly_cost: 10 }) },
-      { data: [{ id: 'booking-0', booked_by: 'student-9' }] },
-      { data: [{ firebase_uid: 'student-9', role: 'student' }] },
+      { data: [{ id: "booking-0", booked_by: "student-9" }] },
+      { data: [{ firebase_uid: "student-9", role: "student" }] },
       { data: null },
-      { data: { id: 'booking-9', status: 'approved' } },
-      { data: { id: 'balance-9', balance: 50 } },
+      { data: { id: "booking-9", status: "approved" } },
+      { data: { id: "balance-9", balance: 50 } },
       { data: { amount: -20 } },
-      { data: [{ id: 'refund-1' }] }, // a refund already exists
+      { data: [{ id: "refund-1" }] }, // a refund already exists
     );
 
     const res = await postBooking(validBooking());
 
     expect(res.statusCode).toBe(201);
-    expect(supabase.findCall('student_token_balances', 'update')).toBeUndefined();
-    expect(supabase.findCall('token_transactions', 'insert')).toBeUndefined();
+    expect(
+      supabase.findCall("student_token_balances", "update"),
+    ).toBeUndefined();
+    expect(supabase.findCall("token_transactions", "insert")).toBeUndefined();
   });
 
-  it('treats an overlap whose profile is missing as a student', async () => {
+  it("treats an overlap whose profile is missing as a student", async () => {
     signInAs(STUDENT);
     supabase.queueResults(
       { data: equipment() },
-      { data: [{ id: 'booking-0', booked_by: 'ghost-user' }] },
+      { data: [{ id: "booking-0", booked_by: "ghost-user" }] },
       { data: [] },
     );
 
@@ -374,31 +425,34 @@ describe('POST /api/v1/bookings — priority and conflicts', () => {
 
   // D-14 regression: a failing overlap query must never be swallowed, or the
   // priority rules see an empty slot and wave the booking through.
-  it('refuses the booking when the overlap query fails', async () => {
+  it("refuses the booking when the overlap query fails", async () => {
     signInAs(LECTURER);
     supabase.queueResults(
       { data: equipment() },
-      { data: null, error: { message: 'relationship not found', code: 'PGRST200' } },
+      {
+        data: null,
+        error: { message: "relationship not found", code: "PGRST200" },
+      },
     );
 
     const res = await postBooking(validBooking());
 
     expect(res.statusCode).toBeGreaterThanOrEqual(400);
-    expect(supabase.findCall('bookings', 'insert')).toBeUndefined();
+    expect(supabase.findCall("bookings", "insert")).toBeUndefined();
   });
 });
 
-describe('POST /api/v1/bookings — student tokens', () => {
+describe("POST /api/v1/bookings — student tokens", () => {
   const paidEquipment = () => equipment({ hourly_cost: 10 });
 
   // TC-TOK-02
-  it('deducts the right number of tokens and logs the transaction', async () => {
+  it("deducts the right number of tokens and logs the transaction", async () => {
     signInAs(STUDENT);
     supabase.queueResults(
       { data: paidEquipment() },
       { data: [] },
-      { data: { id: 'booking-4', status: 'pending' } },
-      { data: { id: 'balance-1', balance: 100 } },
+      { data: { id: "booking-4", status: "pending" } },
+      { data: { id: "balance-1", balance: 100 } },
       { data: null },
       { data: null },
     );
@@ -407,94 +461,221 @@ describe('POST /api/v1/bookings — student tokens', () => {
 
     expect(res.statusCode).toBe(201);
     // 2 hours at 10 tokens/hour = 20, leaving 80.
-    expect(supabase.findCall('student_token_balances', 'update')?.payload).toEqual({ balance: 80 });
-    expect(supabase.findCall('token_transactions', 'insert')?.payload).toMatchObject({
+    expect(
+      supabase.findCall("student_token_balances", "update")?.payload,
+    ).toEqual({ balance: 80 });
+    expect(
+      supabase.findCall("token_transactions", "insert")?.payload,
+    ).toMatchObject({
       amount: -20,
-      type: 'booking_deduction',
-      booking_id: 'booking-4',
+      type: "booking_deduction",
+      booking_id: "booking-4",
     });
   });
 
   // TC-TOK-05
-  it('refuses the booking and deletes it again when the student cannot afford it', async () => {
+  it("refuses the booking and deletes it again when the student cannot afford it", async () => {
     signInAs(STUDENT);
     supabase.queueResults(
       { data: paidEquipment() },
       { data: [] },
-      { data: { id: 'booking-5', status: 'pending' } },
-      { data: { id: 'balance-1', balance: 5 } },
+      { data: { id: "booking-5", status: "pending" } },
+      { data: { id: "balance-1", balance: 5 } },
       { data: null },
     );
 
     const res = await postBooking(validBooking());
 
     expect(res.statusCode).toBe(400);
-    expect(res.json().error.message).toMatch(/Insufficient tokens. Need 20, have 5/);
+    expect(res.json().error.message).toMatch(
+      /Insufficient tokens. Need 20, have 5/,
+    );
     // The booking row must be rolled back, not left orphaned.
-    expect(supabase.findCall('bookings', 'delete')).toBeDefined();
+    expect(supabase.findCall("bookings", "delete")).toBeDefined();
   });
 });
 
-describe('PUT /api/v1/bookings/:id/approve', () => {
+describe("PUT /api/v1/bookings/:id/approve", () => {
   // TC-RBAC-02
-  it('stops a student approving a booking', async () => {
+  it("stops a student approving a booking", async () => {
     signInAs(STUDENT);
 
-    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1/approve",
+    });
 
     expect(res.statusCode).toBe(403);
-    expect(res.json().error.code).toBe('INSUFFICIENT_ROLE');
+    expect(res.json().error.code).toBe("INSUFFICIENT_ROLE");
     expect(supabase.calls).toHaveLength(0);
   });
 
   // TC-BOOK-17
-  it('lets a tenant admin approve a pending booking in their own faculty', async () => {
+  it("lets a tenant admin approve a pending booking in their own faculty", async () => {
     signInAs(TENANT_ADMIN);
     supabase.queueResults(
-      { data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-a' } }, // tenant-ownership fetch
-      { data: { id: 'booking-1', status: 'approved', tenant_id: 'tenant-a' } }, // update
+      { data: { id: "booking-1", status: "pending", tenant_id: "tenant-a" } }, // tenant-ownership fetch
+      { data: { id: "booking-1", status: "approved", tenant_id: "tenant-a" } }, // update
     );
 
-    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1/approve",
+    });
 
     expect(res.statusCode).toBe(200);
-    expect(supabase.findCall('bookings', 'update')?.payload).toMatchObject({
-      status: 'approved',
+    expect(supabase.findCall("bookings", "update")?.payload).toMatchObject({
+      status: "approved",
       approved_by: TENANT_ADMIN.sub,
     });
   });
 
   // TC-BOOK-18
-  it('returns 404 when the booking is not pending', async () => {
+  it("returns 404 when the booking is not pending", async () => {
     signInAs(TENANT_ADMIN);
-    supabase.queueResults({ data: null, error: { message: 'no rows' } }); // the fetch itself finds nothing
+    supabase.queueResults({ data: null, error: { message: "no rows" } }); // the fetch itself finds nothing
 
-    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1/approve",
+    });
 
     expect(res.statusCode).toBe(404);
   });
 
   // TC-RBAC-04 — a tenant admin must not approve another faculty's booking.
-  it('stops a tenant admin approving a booking from another faculty', async () => {
+  it("stops a tenant admin approving a booking from another faculty", async () => {
     signInAs(TENANT_ADMIN);
-    supabase.queueResults({ data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-b' } });
+    supabase.queueResults({
+      data: { id: "booking-1", status: "pending", tenant_id: "tenant-b" },
+    });
 
-    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1/approve",
+    });
 
     expect(res.statusCode).toBe(403);
-    expect(supabase.findCall('bookings', 'update')).toBeUndefined();
+    expect(supabase.findCall("bookings", "update")).toBeUndefined();
   });
 
-  it('lets main_admin approve a booking from any faculty', async () => {
-    signInAs({ ...TENANT_ADMIN, sub: 'super-1', appRole: 'main_admin', tenantId: null });
+  it("lets main_admin approve a booking from any faculty", async () => {
+    signInAs({
+      ...TENANT_ADMIN,
+      sub: "super-1",
+      appRole: "main_admin",
+      tenantId: null,
+    });
     supabase.queueResults(
-      { data: { id: 'booking-1', status: 'pending', tenant_id: 'tenant-b' } },
-      { data: { id: 'booking-1', status: 'approved', tenant_id: 'tenant-b' } },
+      { data: { id: "booking-1", status: "pending", tenant_id: "tenant-b" } },
+      { data: { id: "booking-1", status: "approved", tenant_id: "tenant-b" } },
     );
 
-    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1/approve",
+    });
 
     expect(res.statusCode).toBe(200);
+  });
+});
+
+describe("PUT /api/v1/bookings/:id/status", () => {
+  it("lets a tenant admin revert an approved booking to pending", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults(
+      {
+        data: {
+          id: "booking-1",
+          status: "approved",
+          tenant_id: "tenant-a",
+          resource_id: "res-1",
+          start_time: "2027-01-01T10:00:00Z",
+          end_time: "2027-01-01T12:00:00Z",
+        },
+      },
+      { data: [] }, // overlap check returns empty
+      { data: { id: "booking-1", status: "pending", tenant_id: "tenant-a" } },
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1/status",
+      payload: { status: "pending" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(supabase.findCall("bookings", "update")?.payload).toMatchObject({
+      status: "pending",
+    });
+  });
+
+  it("stops a tenant admin changing status for another faculty", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults({
+      data: {
+        id: "booking-1",
+        status: "approved",
+        tenant_id: "tenant-b",
+        resource_id: "res-1",
+      },
+    });
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1/status",
+      payload: { status: "pending" },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
+  it("rejects if reverting to pending causes an overlap", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults(
+      {
+        data: {
+          id: "booking-1",
+          status: "cancelled",
+          tenant_id: "tenant-a",
+          resource_id: "res-1",
+          start_time: "2027-01-01T10:00:00Z",
+          end_time: "2027-01-01T12:00:00Z",
+        },
+      },
+      { data: [{ id: "overlap-1" }] }, // overlap check returns conflict
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1/status",
+      payload: { status: "pending" },
+    });
+    expect(res.statusCode).toBe(409);
+  });
+});
+
+describe("PUT /api/v1/bookings/:id (Edit)", () => {
+  it("checks for overlaps if an admin changes the time of an approved booking", async () => {
+    signInAs(TENANT_ADMIN);
+    supabase.queueResults(
+      {
+        data: {
+          id: "booking-1",
+          status: "approved",
+          tenant_id: "tenant-a",
+          resource_id: "res-1",
+          start_time: "2027-01-01T10:00:00Z",
+          end_time: "2027-01-01T12:00:00Z",
+        },
+      },
+      { data: [{ id: "overlap-2" }] }, // overlap check finds conflict
+    );
+
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1",
+      payload: { start_time: "2027-01-01T11:00:00Z" },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error.message).toMatch(/overlaps/i);
   });
 });
 
@@ -504,15 +685,15 @@ describe('PUT /api/v1/bookings/:id/approve', () => {
  * frontend's retry logic branches on 401, and a 500 tells a client "we broke"
  * when the truth is "your request was malformed".
  */
-describe('error handling', () => {
+describe("error handling", () => {
   // TC-ERR-07
-  it('returns 400, not 500, for a malformed JSON body', async () => {
+  it("returns 400, not 500, for a malformed JSON body", async () => {
     signInAs(STUDENT);
 
     const res = await app.inject({
-      method: 'POST',
-      url: '/api/v1/bookings',
-      headers: { 'content-type': 'application/json' },
+      method: "POST",
+      url: "/api/v1/bookings",
+      headers: { "content-type": "application/json" },
       payload: '{"resource_id": "resource-1", oops',
     });
 
@@ -520,7 +701,7 @@ describe('error handling', () => {
   });
 
   // TC-ERR-08
-  it('returns 400 for a field of the wrong type, and names the problem', async () => {
+  it("returns 400 for a field of the wrong type, and names the problem", async () => {
     signInAs(STUDENT);
     supabase.queueResults(
       { data: equipment() },
@@ -528,29 +709,37 @@ describe('error handling', () => {
       // Postgres rejects the insert: 22P02 is invalid_text_representation.
       {
         data: null,
-        error: { code: '22P02', message: 'invalid input syntax for type integer: "many"' },
+        error: {
+          code: "22P02",
+          message: 'invalid input syntax for type integer: "many"',
+        },
       },
     );
 
-    const res = await postBooking(validBooking({ attendee_count: 'many' }));
+    const res = await postBooking(validBooking({ attendee_count: "many" }));
 
     expect(res.statusCode).toBe(400);
-    expect(res.json().error.message).toMatch(/attendee_count|whole number|integer/i);
+    expect(res.json().error.message).toMatch(
+      /attendee_count|whole number|integer/i,
+    );
   });
 
   // TC-ERR-08 — the same failure must not expose database internals.
-  it('does not leak raw database error text to the client', async () => {
+  it("does not leak raw database error text to the client", async () => {
     signInAs(STUDENT);
     supabase.queueResults(
       { data: equipment() },
       { data: [] },
       {
         data: null,
-        error: { code: '22P02', message: 'invalid input syntax for type integer: "many"' },
+        error: {
+          code: "22P02",
+          message: 'invalid input syntax for type integer: "many"',
+        },
       },
     );
 
-    const res = await postBooking(validBooking({ attendee_count: 'many' }));
+    const res = await postBooking(validBooking({ attendee_count: "many" }));
     const body = res.payload;
 
     expect(body).not.toMatch(/invalid input syntax/i);
@@ -558,7 +747,7 @@ describe('error handling', () => {
   });
 
   // TC-ERR-05
-  it('does not leak connection details when the database is unreachable', async () => {
+  it("does not leak connection details when the database is unreachable", async () => {
     signInAs(STUDENT);
     supabase.queueResults(
       { data: equipment() },
@@ -567,8 +756,9 @@ describe('error handling', () => {
       {
         data: null,
         error: {
-          message: 'connect ECONNREFUSED db.abcdefgh.supabase.co:5432 key=eyJhbGciOiJIUzI1NiJ9',
-          code: 'ECONNREFUSED',
+          message:
+            "connect ECONNREFUSED db.abcdefgh.supabase.co:5432 key=eyJhbGciOiJIUzI1NiJ9",
+          code: "ECONNREFUSED",
         },
       },
     );
@@ -583,7 +773,7 @@ describe('error handling', () => {
   });
 
   // TC-ERR-09
-  it('handles a resource deleted between page load and submit', async () => {
+  it("handles a resource deleted between page load and submit", async () => {
     signInAs(STUDENT);
     supabase.queueResults({ data: null }); // the resource is gone by submit time
 
@@ -596,39 +786,44 @@ describe('error handling', () => {
   });
 
   // TC-ERR-11
-  it('still creates the booking when the notification event fails to publish', async () => {
+  it("still creates the booking when the notification event fails to publish", async () => {
     signInAs(STUDENT);
-    (publishEvent as jest.Mock).mockRejectedValueOnce(new Error('redis unreachable'));
+    (publishEvent as jest.Mock).mockRejectedValueOnce(
+      new Error("redis unreachable"),
+    );
 
     supabase.queueResults(
       { data: equipment() },
       { data: [] },
-      { data: { id: 'booking-err-11', status: 'pending' } },
+      { data: { id: "booking-err-11", status: "pending" } },
     );
 
     const res = await postBooking(validBooking());
 
     // Notifications are a side effect. Losing one must not lose the booking.
     expect(res.statusCode).toBe(201);
-    expect(res.json().data.id).toBe('booking-err-11');
+    expect(res.json().data.id).toBe("booking-err-11");
   });
 
-  it('reports a failed approval as 404 rather than surfacing the raw error', async () => {
+  it("reports a failed approval as 404 rather than surfacing the raw error", async () => {
     signInAs(TENANT_ADMIN);
     supabase.queueResults({
       data: null,
-      error: { message: 'relation "bookings" does not exist', code: '42P01' },
+      error: { message: 'relation "bookings" does not exist', code: "42P01" },
     });
 
-    const res = await app.inject({ method: 'PUT', url: '/api/v1/bookings/booking-1/approve' });
+    const res = await app.inject({
+      method: "PUT",
+      url: "/api/v1/bookings/booking-1/approve",
+    });
 
     expect(res.statusCode).toBe(404);
     expect(res.payload).not.toMatch(/relation "bookings"/);
   });
 });
 
-describe('auth state', () => {
-  it('is reset between tests', () => {
+describe("auth state", () => {
+  it("is reset between tests", () => {
     expect(authState.user).toBeNull();
   });
 });
