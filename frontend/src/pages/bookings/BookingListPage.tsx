@@ -75,7 +75,6 @@ export function BookingListPage() {
     action: "approve" | "reject" | "cancel" | "pending",
   ) => {
     let url = `/bookings/${id}/${action}`;
-    let method = "put";
     let payload = {};
 
     if (action === "pending") {
