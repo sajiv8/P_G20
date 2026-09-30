@@ -559,7 +559,7 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     // Users can view themselves; admins can view anyone in their tenant
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('*')
+      .select('*, tenants(name)')
       .eq('firebase_uid', uid)
       .single();
 

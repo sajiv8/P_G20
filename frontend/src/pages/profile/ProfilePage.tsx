@@ -6,7 +6,7 @@ import { ImageCropModal } from '../../components/ImageCropModal';
 import { resolveAvatarUrl } from '../../lib/avatar';
 import {
   User, Mail, Phone, Hash, Shield, Camera, Save, LogOut, Trash2,
-  Edit3, X, Loader2, Calendar,
+  Edit3, X, Loader2, Calendar, Building2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -21,6 +21,7 @@ interface UserProfile {
   is_active: boolean;
   created_at: string;
   tenant_id: string;
+  tenants?: { name: string };
 }
 
 const roleLabels: Record<string, string> = {
@@ -206,6 +207,12 @@ export function ProfilePage() {
         <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-2)' }}>{profile?.email}</p>
         <div style={{ display: 'flex', gap: 'var(--space-2)', justifyContent: 'center', flexWrap: 'wrap' }}>
           <span className="badge badge-primary">{roleLabels[profile?.role || ''] || profile?.role}</span>
+          {profile?.tenants?.name && (
+            <span className="badge" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', fontWeight: 600 }}>
+              <Building2 size={12} style={{ marginRight: 4 }} />
+              {profile.tenants.name}
+            </span>
+          )}
           {profile?.member_id && <span className="badge badge-info">{profile.member_id}</span>}
           <span className="badge badge-success">{profile?.is_active ? 'Active' : 'Inactive'}</span>
         </div>
@@ -262,6 +269,7 @@ export function ProfilePage() {
             <DetailItem icon={<Hash size={16} />} label="Member ID" value={profile?.member_id || '—'} />
             <DetailItem icon={<Phone size={16} />} label="Mobile" value={profile?.phone || '—'} />
             <DetailItem icon={<Shield size={16} />} label="Role" value={roleLabels[profile?.role || ''] || profile?.role || '—'} />
+            <DetailItem icon={<Building2 size={16} />} label="Faculty" value={profile?.tenants?.name || '—'} />
             <DetailItem icon={<Calendar size={16} />} label="Joined" value={profile?.created_at ? format(new Date(profile.created_at), 'MMM d, yyyy') : '—'} />
           </div>
         )}
