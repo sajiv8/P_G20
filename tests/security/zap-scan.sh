@@ -47,7 +47,15 @@ echo ""
 
 # -I keeps the exit code at 0 for warnings so the scan reports rather than
 # blocks. Drop it once the findings are triaged and you want this to gate.
-docker run --rm --add-host=host.docker.internal:host-gateway -v "$REPORT_DIR:/zap/wrk:rw" zaproxy/zap-stable zap-baseline.py -t "$TARGET" -r zap-report.html -J zap-report.json -I
+docker run --rm \
+  --add-host=host.docker.internal:host-gateway \
+  -v "$REPORT_DIR:/zap/wrk:rw" \
+  zaproxy/zap-stable \
+  zap-baseline.py \
+  -t "$TARGET" \
+  -r zap-report.html \
+  -J zap-report.json \
+  -I
 
 echo ""
 echo "HTML report: tests/security/reports/zap-report.html"

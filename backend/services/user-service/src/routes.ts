@@ -82,8 +82,7 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
 
     try {
       const { getAuth } = await import('firebase-admin/auth');
-      const actionCodeSettings = { url: 'https://rso.hnasiaexport.com/login' };
-      const link = await getAuth().generatePasswordResetLink(email, actionCodeSettings);
+      const link = await getAuth().generatePasswordResetLink(email);
 
       await publishEvent('system-events', {
         type: 'user.password_reset_requested',
@@ -183,8 +182,7 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
 
     try {
       const { getAuth } = await import('firebase-admin/auth');
-      const actionCodeSettings = { url: 'https://rso.hnasiaexport.com/login' };
-      const link = await getAuth().generateEmailVerificationLink(user.email, actionCodeSettings);
+      const link = await getAuth().generateEmailVerificationLink(user.email);
       
       await publishEvent('system-events', {
         type: 'user.email_verification_requested',
@@ -281,8 +279,7 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     try {
       if (user.email) {
         const { getAuth } = await import('firebase-admin/auth');
-        const actionCodeSettings = { url: 'https://rso.hnasiaexport.com/login' };
-        const link = await getAuth().generateEmailVerificationLink(user.email, actionCodeSettings);
+        const link = await getAuth().generateEmailVerificationLink(user.email);
         await publishEvent('system-events', {
           type: 'user.email_verification_requested',
           payload: { email: user.email, link },

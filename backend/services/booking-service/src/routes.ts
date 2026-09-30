@@ -285,7 +285,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
 
       // Must not be swallowed: with no overlap list the priority rules see an
       // empty slot and wave everything through to the database constraint.
-      if (overlapError) throw ApiError.internal("An unexpected database error occurred");
+      if (overlapError) throw overlapError;
 
       // Roles are fetched separately rather than embedded. There is no foreign
       // key from bookings.booked_by to user_profiles.firebase_uid, so PostgREST
@@ -721,7 +721,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
           .lt("start_time", nextEnd)
           .gt("end_time", nextStart);
 
-        if (overlapError) throw ApiError.internal("An unexpected database error occurred");
+        if (overlapError) throw overlapError;
         if (overlaps && overlaps.length > 0) {
           throw ApiError.conflict(
             "The updated time slot overlaps with an existing booking",
@@ -828,7 +828,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
           .lt("start_time", booking.end_time)
           .gt("end_time", booking.start_time);
 
-        if (overlapError) throw ApiError.internal("An unexpected database error occurred");
+        if (overlapError) throw overlapError;
         if (overlaps && overlaps.length > 0) {
           throw ApiError.conflict(
             "Cannot restore booking: time slot is now occupied",

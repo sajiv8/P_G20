@@ -34,6 +34,8 @@ function buildEmailHtml(opts: {
   ctaText?: string;
   ctaUrl?: string;
   footer?: string;
+  /** Show "If you did not request this" only for user-initiated actions */
+  showIgnoreNotice?: boolean;
 }): string {
   const detailsHtml = opts.details?.length
     ? `<ul style="margin: 16px 0; padding-left: 20px; color: #374151;">
@@ -51,6 +53,10 @@ function buildEmailHtml(opts: {
          If the button does not work, copy and paste this link into your browser:<br/>
          <a href="${opts.ctaUrl}" style="color: #2563eb;">${opts.ctaUrl}</a>
        </p>`
+    : '';
+
+  const ignoreHtml = opts.showIgnoreNotice
+    ? `<p style="color: #6b7280; font-size: 13px;">If you did not request this, you can safely ignore this email.</p>`
     : '';
 
   return `<!doctype html>
@@ -73,14 +79,13 @@ function buildEmailHtml(opts: {
     
     ${ctaHtml}
     
-    <p style="color: #374151;">
-      If you did not request this, you can safely ignore this email.
-    </p>
+    ${ignoreHtml}
     
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0 16px 0;">
     
     <p style="font-size: 12px; color: #6b7280; margin: 0;">
-      RSO Campus — Campus Resource Management Platform
+      RSO Campus &mdash; Campus Resource Management Platform<br/>
+      You received this email because you have an account on RSO Campus.
     </p>
   </div>
 </body>
@@ -218,19 +223,19 @@ async function handleBookingEvent(event: StreamEvent): Promise<void> {
       const userEmail = await getUserEmail(payload.booked_by as string);
       if (userEmail) {
         const html = buildEmailHtml({
-          title: 'Booking Submitted ✅',
+          title: 'Booking Submitted',
           greeting: 'Your booking request has been submitted successfully.',
           body: 'Your booking is now pending approval. You will receive an email once it has been reviewed.',
           details: [
             { label: 'Booking ID', value: (payload.booking_id as string).slice(0, 8) },
           ],
         });
-        await sendEmail(userEmail, 'Booking Submitted — CampusRSO', html);
+        await sendEmail(userEmail, 'Booking Submitted - CampusRSO', html);
       }
 
       // 2. Notify in-app for the user
       if (payload.booked_by) {
-        await createNotification(tenantId, payload.booked_by as string, 'booking_created', 'Booking Submitted', 'Your booking request has been submitted and is pending approval.', payload);
+        await createNotification(tenantId, payload.booked_by as string, 'booking_created', 'Booking Submitted', 'Your booking request has been submitted and is pending approval.', payload);  
       }
 
       // 3. Notify tenant admins + main admins
@@ -253,15 +258,15 @@ async function handleBookingEvent(event: StreamEvent): Promise<void> {
       // Notify user
       const userEmail = await getUserEmail(uid);
       const html = buildEmailHtml({
-        title: 'Booking Approved ✅',
+        title: 'Booking Approved',
         greeting: 'Great news!',
         body: 'Your booking request has been approved. You can now use the resource at your scheduled time.',
         details: [
           { label: 'Booking ID', value: (payload.booking_id as string).slice(0, 8) },
         ],
       });
-      await createNotification(tenantId, uid, 'booking_approved', 'Booking Approved ✅', 'Your booking request has been approved.', payload);
-      if (userEmail) await sendEmail(userEmail, 'Booking Approved — CampusRSO', html);
+      await createNotification(tenantId, uid, 'booking_approved', 'Booking Approved', 'Your booking request has been approved.', payload);
+      if (userEmail) await sendEmail(userEmail, 'Booking Approved - CampusRSO', html);
 
       // Notify admins
       const adminHtml = buildEmailHtml({
@@ -280,15 +285,15 @@ async function handleBookingEvent(event: StreamEvent): Promise<void> {
       const reason = payload.reason ? ` Reason: ${payload.reason}` : '';
       const userEmail = await getUserEmail(uid);
       const html = buildEmailHtml({
-        title: 'Booking Rejected ❌',
+        title: 'Booking Rejected',
         body: `Unfortunately, your booking request has been rejected.${reason}`,
         details: [
           { label: 'Booking ID', value: (payload.booking_id as string).slice(0, 8) },
           ...(payload.reason ? [{ label: 'Reason', value: payload.reason as string }] : []),
         ],
       });
-      await createNotification(tenantId, uid, 'booking_rejected', 'Booking Rejected ❌', `Your booking request has been rejected.${reason}`, payload);
-      if (userEmail) await sendEmail(userEmail, 'Booking Rejected — CampusRSO', html);
+      await createNotification(tenantId, uid, 'booking_rejected', 'Booking Rejected', `Your booking request has been rejected.${reason}`, payload);
+      if (userEmail) await sendEmail(userEmail, 'Booking Rejected - CampusRSO', html);
 
       // Notify admins
       const adminHtml = buildEmailHtml({
@@ -313,7 +318,7 @@ async function handleBookingEvent(event: StreamEvent): Promise<void> {
         ],
       });
       await createNotification(tenantId, uid, 'booking_cancelled', 'Booking Cancelled', 'A booking has been cancelled.', payload);
-      if (userEmail) await sendEmail(userEmail, 'Booking Cancelled — CampusRSO', html);
+      if (userEmail) await sendEmail(userEmail, 'Booking Cancelled - CampusRSO', html);
 
       // Notify admins
       const adminHtml = buildEmailHtml({
@@ -356,7 +361,7 @@ async function handleBookingEvent(event: StreamEvent): Promise<void> {
         `A higher-priority user has taken this slot. ${refundLine}`,
         payload,
       );
-      if (userEmail) await sendEmail(userEmail, 'Your booking was replaced — CampusRSO', html);
+      if (userEmail) await sendEmail(userEmail, 'Your booking was replaced - CampusRSO', html);
       return;
     }
 
@@ -366,14 +371,14 @@ async function handleBookingEvent(event: StreamEvent): Promise<void> {
 
       const userEmail = await getUserEmail(uid);
       const html = buildEmailHtml({
-        title: 'Booking Updated ✏️',
+        title: 'Booking Updated',
         body: 'Your booking has been modified by an administrator.',
         details: [
           { label: 'Booking ID', value: (payload.booking_id as string).slice(0, 8) },
         ],
       });
-      await createNotification(tenantId, uid, 'booking_updated', 'Booking Updated ✏️', 'Your booking has been modified by an administrator.', payload);
-      if (userEmail) await sendEmail(userEmail, 'Booking Updated — CampusRSO', html);
+      await createNotification(tenantId, uid, 'booking_updated', 'Booking Updated', 'Your booking has been modified by an administrator.', payload);
+      if (userEmail) await sendEmail(userEmail, 'Booking Updated - CampusRSO', html);
 
       // Notify admins
       const adminHtml = buildEmailHtml({
@@ -406,7 +411,7 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
       if (payload.created_by) {
         const userEmail = await getUserEmail(payload.created_by as string);
         const html = buildEmailHtml({
-          title: 'Resource Created ✅',
+          title: 'Resource Created',
           greeting: 'Your resource has been created successfully.',
           body: `The resource <strong>${resourceName}</strong> is now available in CampusRSO.`,
           details: [
@@ -416,7 +421,7 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
           ],
         });
         await createNotification(tenantId, payload.created_by as string, 'resource_created', 'Resource Created', `Your resource "${resourceName}" has been created.`, payload);
-        if (userEmail) await sendEmail(userEmail, 'Resource Created — CampusRSO', html);
+        if (userEmail) await sendEmail(userEmail, 'Resource Created - CampusRSO', html);
       }
 
       // Notify admins
@@ -454,7 +459,7 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
 
       // Notify admins
       const adminHtml = buildEmailHtml({
-        title: 'Resource Deleted ⚠️',
+        title: 'Resource Deleted',
         body: `The resource <strong>${resourceName}</strong> has been deleted from <strong>${tenantName}</strong>.`,
         details: [
           { label: 'Resource', value: resourceName },
@@ -475,16 +480,16 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
       // Welcome email to user
       if (email) {
         const html = buildEmailHtml({
-          title: 'Welcome to CampusRSO! 🎉',
+          title: 'Welcome to CampusRSO',
           greeting: `Hello ${fullName},`,
-          body: 'Your account has been created successfully. You can now browse resources, create bookings, and share student resources with your peers.',
+          body: 'Your account has been created and your email has been verified. You can now browse resources, create bookings, and share student resources with your peers.',
           details: [
             { label: 'Faculty', value: tName },
             { label: 'Role', value: 'Student' },
           ],
           footer: 'Welcome aboard! If you have any questions, contact your faculty admin.',
         });
-        await sendEmail(email, 'Welcome to CampusRSO! 🎉', html);
+        await sendEmail(email, 'Welcome to CampusRSO', html);
       }
 
       // Notify admins
@@ -517,7 +522,7 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
             { label: 'Faculty', value: tenantName },
           ],
         });
-        await sendEmail(email, 'Role Updated — CampusRSO', html);
+        await sendEmail(email, 'Role Updated - CampusRSO', html);
       }
 
       // In-app notification to user
@@ -547,7 +552,7 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
       // Notify the banned user
       if (email) {
         const html = buildEmailHtml({
-          title: 'Account Suspended ⚠️',
+          title: 'Account Suspended',
           greeting: `Hello ${fullName},`,
           body: 'Your CampusRSO account has been suspended by an administrator. You will not be able to access the system until your account is reactivated.',
           details: [
@@ -555,7 +560,7 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
           ],
           footer: 'If you believe this was a mistake, please contact your faculty administrator.',
         });
-        await sendEmail(email, 'Account Suspended — CampusRSO', html);
+        await sendEmail(email, 'Account Suspended - CampusRSO', html);
       }
 
       // In-app notification (they won't see it until unbanned, but it's recorded)
@@ -584,11 +589,11 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
       // Notify the user
       if (email) {
         const html = buildEmailHtml({
-          title: 'Account Reactivated ✅',
+          title: 'Account Reactivated',
           greeting: `Hello ${fullName},`,
           body: 'Your CampusRSO account has been reactivated. You can now log in and use all features again.',
         });
-        await sendEmail(email, 'Account Reactivated — CampusRSO', html);
+        await sendEmail(email, 'Account Reactivated - CampusRSO', html);
       }
 
       if (payload.uid) {
@@ -636,14 +641,15 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
       }
 
       const html = buildEmailHtml({
-        title: 'Verify Your Email',
-        greeting: 'Welcome to CampusRSO!',
-        body: 'Please click the button below to verify your email address and activate your account.',
+        title: 'Verify Your Email Address',
+        greeting: 'Welcome to CampusRSO',
+        body: 'You are receiving this email because an account was created on CampusRSO with this email address. Please click the button below to verify your email and activate your account.',
         ctaText: 'Verify My Email',
         ctaUrl: link,
         footer: 'If you did not create an account, you can safely ignore this email.',
+        showIgnoreNotice: true,
       });
-      await sendEmail(email, 'Verify Your Email — CampusRSO', html);
+      await sendEmail(email, 'Verify your email address - CampusRSO', html);
       logger.info({ emailDomain: email.split('@')[1] }, 'Verification email sent');
       return;
     }
@@ -661,12 +667,13 @@ async function handleSystemEvent(event: StreamEvent): Promise<void> {
       const html = buildEmailHtml({
         title: 'Reset Your Password',
         greeting: 'Password Reset Requested',
-        body: 'Click the button below to reset your password. This link will expire in 1 hour.',
+        body: 'You requested a password reset for your CampusRSO account. Click the button below to choose a new password. This link will expire in 1 hour.',
         ctaText: 'Reset Password',
         ctaUrl: link,
         footer: 'If you did not request this, you can safely ignore this email. Your password will not change.',
+        showIgnoreNotice: true,
       });
-      await sendEmail(email, 'Reset Your Password — CampusRSO', html);
+      await sendEmail(email, 'Reset your password - CampusRSO', html);
       logger.info({ emailDomain: email.split('@')[1] }, 'Password reset email sent');
       return;
     }

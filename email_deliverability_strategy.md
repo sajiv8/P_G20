@@ -1,36 +1,90 @@
-# Future Domain Migration Strategy
+# Email Deliverability Strategy — CampusRSO
 
-Moving from a generic `@gmail.com` address (via Gmail SMTP) to a custom domain is strongly recommended for the Campus RSO Platform's long-term email deliverability.
+## Current Setup
 
-## Why Migrate?
-1. **Sending Limits**: Personal Gmail accounts limit outgoing mail to 500 emails per day. As the platform scales, transactional emails (signups, approvals, resets) will quickly hit this cap.
-2. **Spam Classification**: Major ESPs (Email Service Providers) often flag automated transactional emails sent from a `@gmail.com` address. 
-3. **Authentication (SPF/DKIM/DMARC)**: You cannot configure domain-level authentication for a generic `@gmail.com` address. Custom domains allow you to publish DNS records that prove your system is authorized to send emails, drastically reducing spam rates.
-4. **Professionalism**: Emails coming from `noreply@campusrso.com` establish trust better than `rsocampus@gmail.com`.
+The platform sends all transactional emails through **Gmail SMTP** using a Gmail App Password.
+
+| Setting           | Value                                 |
+| ----------------- | ------------------------------------- |
+| Provider          | Gmail SMTP (`smtp.gmail.com:465`)     |
+| Authentication    | App Password (NOT normal password)    |
+| Sender            | `RSO Campus <rsocampus@gmail.com>`    |
+| Reply-To          | Same as `MAIL_USER`                   |
+| Transport Library | Nodemailer (Node.js)                  |
+
+## What the application controls (done)
+
+1. **Explicit SMTP config** — `host: smtp.gmail.com`, `port: 465`, `secure: true` (implicit TLS).
+2. **Reply-To header** — matches the authenticated sender.
+3. **Both `text/plain` and `text/html`** — every email includes both MIME parts.
+4. **Transactional headers** — `Precedence: transactional` and `X-Auto-Response-Suppress`.
+5. **Clean subjects** — no emojis, no ALL-CAPS, no excessive punctuation.
+6. **Clear sender identity** — From name is `RSO Campus`, consistent across all emails.
+7. **Explains why the recipient got the email** — footer says "You received this email because you have an account on RSO Campus."
+8. **Connection pooling** — reuses SMTP connections across a burst of emails.
+9. **Credential safety** — credentials never logged; loaded from environment variables only.
+
+## What the application CANNOT control
+
+### Sending from `@gmail.com`
+
+Because the platform sends from a `@gmail.com` address:
+
+- **SPF** is managed by Google; you cannot add your own SPF record for `gmail.com`.
+- **DKIM** is signed by Google automatically for all Gmail-sent mail.
+- **DMARC** for `gmail.com` is published by Google (`p=none` as of 2025).
+- You **cannot** modify any of these DNS records.
+
+### Why `@gmail.com` mail goes to Spam
+
+Gmail applies rate limits and reputation scoring to App Password senders:
+
+1. **Daily limit**: ~500 emails/day for personal accounts.
+2. **Reputation**: Bulk automated mail from personal accounts triggers spam classification at major ESPs (Google, Microsoft, Yahoo).
+3. **No custom authentication**: Recipients' mail providers see the mail as "yet another Gmail user" rather than a verified business sender.
 
 ## Recommended Migration Path
 
-### 1. Purchase and Verify a Custom Domain
-Acquire a domain (e.g., `campusrso.com` or `campus-rso.edu`) and connect it to a dedicated transactional email provider.
+Moving to a **custom domain** is the only way to guarantee inbox placement at scale.
+
+### 1. Acquire a Domain
+
+Example: `campusrso.com` or `rso.hnasiaexport.com` (if you already control this domain).
 
 ### 2. Choose a Transactional Email Provider
-- **Resend** (Recommended): Modern, developer-friendly, and easy to set up.
-- **Amazon SES**: Highly cost-effective at scale but has a steeper learning curve.
-- **SendGrid / Postmark**: Industry standards with high deliverability rates.
+
+- **Amazon SES** — Highly cost-effective at scale.
+- **Postmark** — Excellent deliverability, built for transactional mail.
+- **SendGrid** — Industry standard.
+- **Google Workspace** — If you want to keep Gmail but with domain auth.
 
 ### 3. Configure DNS Records
-Your provider will require you to add specific DNS records to your domain's registrar (Route53, Cloudflare, GoDaddy, etc.):
-- **SPF (Sender Policy Framework)**: Authorizes the provider's IP addresses to send emails on your behalf.
-- **DKIM (DomainKeys Identified Mail)**: Adds a cryptographic signature to your emails.
-- **DMARC (Domain-based Message Authentication, Reporting, and Conformance)**: Instructs receiving servers on what to do if an email fails SPF or DKIM checks (e.g., `p=reject` or `p=quarantine`).
 
-### 4. Update the Platform Configuration
-Once the domain is verified, update the Kubernetes Secrets / Environment Variables:
+Your provider will give you the exact values. You need:
+
+| Record | Purpose                                                 |
+| ------ | ------------------------------------------------------- |
+| SPF    | Authorises the provider's IP addresses to send for you  |
+| DKIM   | Adds a cryptographic signature (provider gives the key) |
+| DMARC  | Instructs receivers what to do on SPF/DKIM failure      |
+
+**These must be added at your domain's DNS registrar** (Cloudflare, Route53, GoDaddy, etc.). No application code change can substitute for DNS records.
+
+### 4. Update Platform Configuration
+
+Once the domain is verified with your provider, update environment variables:
+
 ```env
-SMTP_HOST=smtp.resend.com
-SMTP_PORT=465
-SMTP_USER=resend
-SMTP_PASS=<your_api_key>
-EMAIL_FROM="Campus RSO <noreply@campusrso.com>"
+MAIL_USER=<provider-smtp-user>
+MAIL_APP_PASSWORD=<provider-api-key-or-password>
+MAIL_FROM="CampusRSO <noreply@your-domain.com>"
+MAIL_REPLY_TO=support@your-domain.com
 ```
-Since the codebase already uses `nodemailer` and `EMAIL_FROM` environment variables, this change requires zero code refactoring—only infrastructure config updates.
+
+Since the codebase uses `nodemailer` with `host`/`port` configuration and reads all settings from environment variables, switching providers requires **zero code changes** — only infrastructure config updates.
+
+### 5. Production Domain URL
+
+The production URL is: `https://rso.hnasiaexport.com/`
+
+All email verification and password reset links are generated by Firebase Auth, which uses its own domain for action URLs. If you configure a custom domain in Firebase Console (Authentication → Templates → Edit template → Customize action URL), those links will use your domain instead.
