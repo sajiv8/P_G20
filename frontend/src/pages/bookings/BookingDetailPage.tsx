@@ -94,6 +94,13 @@ export function BookingDetailPage() {
           <div>
             <p style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>Resource</p>
             <p style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>{resourceName}</p>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)', flexWrap: 'wrap' }}>
+              {(booking.resources?.location) && (
+                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  📍 {booking.resources.location}
+                </span>
+              )}
+            </div>
           </div>
           <div>
             <p style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>Status</p>

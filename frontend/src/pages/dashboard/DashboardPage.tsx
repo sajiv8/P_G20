@@ -48,8 +48,16 @@ export function DashboardPage() {
         const resources = resourcesRes.data || [];
         const bookings = bookingsRes.data || [];
 
+        const isStudentRole = claims?.app_role === 'student';
         setStats({
-          totalResources: Array.isArray(resources) ? resources.filter((r: any) => r.is_bookable !== false && r.status === 'available').length : 0,
+          totalResources: Array.isArray(resources)
+            ? resources.filter((r: any) => {
+                if (r.is_bookable === false || r.status !== 'available') return false;
+                // Students can only book EQUIPMENT through regular booking
+                if (isStudentRole && r.category !== 'EQUIPMENT') return false;
+                return true;
+              }).length
+            : 0,
           activeBookings: Array.isArray(bookings) ? bookings.filter((b: any) => b.status === 'active' || b.status === 'approved').length : 0,
           pendingApprovals: Array.isArray(bookings) ? bookings.filter((b: any) => b.status === 'pending').length : 0,
           totalUsers: 0,
@@ -76,7 +84,7 @@ export function DashboardPage() {
   }, [claims?.app_role]);
 
   const statCards = [
-    { label: 'Total Resources', value: stats.totalResources, icon: Monitor, color: 'var(--color-primary)', bg: 'var(--color-primary-light)' },
+    { label: isStudent ? 'Bookable Resources' : 'Total Resources', value: stats.totalResources, icon: Monitor, color: 'var(--color-primary)', bg: 'var(--color-primary-light)' },
     { label: 'Active Bookings', value: stats.activeBookings, icon: CalendarDays, color: 'var(--color-success)', bg: 'var(--color-success-light)' },
     { label: 'Pending Approvals', value: stats.pendingApprovals, icon: Clock, color: 'var(--color-warning)', bg: 'var(--color-warning-light)' },
     ...(isStudent ? [{

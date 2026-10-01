@@ -47,7 +47,7 @@ export function ResourceDetailPage() {
   const navigate = useNavigate();
   const { claims } = useAuth();
   const { toast } = useToast();
-  const isAdmin = claims.app_role === 'super_admin' || claims.app_role === 'tenant_admin';
+  const isAdmin = claims.app_role === 'main_admin' || claims.app_role === 'tenant_admin';
 
   const [resource, setResource] = useState<Resource | null>(null);
   const [todayBookings, setTodayBookings] = useState<AvailabilityBooking[]>([]);
