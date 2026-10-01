@@ -160,7 +160,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
         });
 
       // Tenant scoping
-      if (request.user!.appRole !== "main_admin") {
+      if (!['main_admin', 'lecturer', 'junior_lecturer'].includes(request.user!.appRole)) {
         if (my_bookings !== "true") {
           const tenantId = request.user!.tenantId;
           if (!tenantId || tenantId === "null" || tenantId === "undefined") {
@@ -187,7 +187,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       if (error) {
         logger.warn({ error }, "Bookings rich query failed, falling back to simple select");
         let fallbackQuery = supabase.from("bookings").select("*, resources(name, resource_type, location)", { count: "exact" });
-        if (request.user!.appRole !== "main_admin") {
+        if (!['main_admin', 'lecturer', 'junior_lecturer'].includes(request.user!.appRole)) {
           if (my_bookings !== "true") {
             fallbackQuery = fallbackQuery.eq("tenant_id", request.user!.tenantId!);
           }
@@ -230,7 +230,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       // Allow the booking owner to always view their own booking (cross-tenant or cancelled)
       const isBookingOwner = data.booked_by === request.user!.sub;
       if (
-        request.user!.appRole !== "main_admin" &&
+        !['main_admin', 'lecturer', 'junior_lecturer'].includes(request.user!.appRole) &&
         !isBookingOwner &&
         data.tenant_id !== request.user!.tenantId
       ) {
@@ -283,7 +283,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       const { data: resource } = await supabase
         .from("resources")
         .select(
-          "id, tenant_id, is_bookable, status, category, allowed_roles, hourly_cost",
+          "id, name, tenant_id, is_bookable, status, category, allowed_roles, hourly_cost",
         )
         .eq("id", body.resource_id)
         .single();
@@ -537,6 +537,26 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
         "Your booking request has been submitted and is pending approval.",
         { booking_id: booking.id, resource_id: body.resource_id },
       );
+
+      // Direct notification to tenant admins
+      if (resource.tenant_id && resource.tenant_id !== 'system') {
+        const { data: tenantAdmins } = await supabase
+          .from("user_profiles")
+          .select("firebase_uid")
+          .eq("tenant_id", resource.tenant_id)
+          .eq("role", "tenant_admin");
+
+        for (const admin of tenantAdmins || []) {
+          await createBookingNotification(
+            resource.tenant_id,
+            admin.firebase_uid,
+            "booking_created",
+            "New Booking Request",
+            `A new booking has been submitted for ${resource.name || 'a resource'} and needs approval.`,
+            { booking_id: booking.id, resource_id: body.resource_id },
+          );
+        }
+      }
 
       logger.info(
         { bookingId: booking.id, resourceId: body.resource_id },

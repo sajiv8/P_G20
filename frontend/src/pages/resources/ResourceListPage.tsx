@@ -57,7 +57,7 @@ export function ResourceListPage() {
       r.location?.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === 'all' || r.resource_type === typeFilter;
     // Students can only see equipment resources
-    const matchStudentRestriction = !isStudent || r.resource_type === 'equipment';
+    const matchStudentRestriction = !isStudent || r.category === 'EQUIPMENT';
     return matchSearch && matchType && matchStudentRestriction;
   });
 

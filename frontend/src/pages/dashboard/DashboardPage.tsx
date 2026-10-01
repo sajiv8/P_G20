@@ -37,7 +37,7 @@ export function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
-        const isAdmin = claims?.app_role === 'main_admin' || claims?.app_role === 'tenant_admin';
+        const isAdmin = ['main_admin', 'tenant_admin', 'lecturer', 'junior_lecturer'].includes(claims?.app_role || '');
         const params = isAdmin ? '' : '?my_bookings=true';
 
         const [resourcesRes, bookingsRes] = await Promise.all([
@@ -52,6 +52,7 @@ export function DashboardPage() {
         setStats({
           totalResources: Array.isArray(resources)
             ? resources.filter((r: any) => {
+                if (isAdmin) return true;
                 if (r.is_bookable === false || r.status !== 'available') return false;
                 // Students can only book EQUIPMENT through regular booking
                 if (isStudentRole && r.category !== 'EQUIPMENT') return false;
