@@ -49,7 +49,7 @@ export function DashboardPage() {
         const bookings = bookingsRes.data || [];
 
         setStats({
-          totalResources: Array.isArray(resources) ? resources.length : 0,
+          totalResources: Array.isArray(resources) ? resources.filter((r: any) => r.is_bookable !== false && r.status === 'available').length : 0,
           activeBookings: Array.isArray(bookings) ? bookings.filter((b: any) => b.status === 'active' || b.status === 'approved').length : 0,
           pendingApprovals: Array.isArray(bookings) ? bookings.filter((b: any) => b.status === 'pending').length : 0,
           totalUsers: 0,

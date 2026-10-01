@@ -114,7 +114,7 @@ export function ResourceListPage() {
       <div className="page-header">
         <div>
           <h2 className="page-title">Resources</h2>
-          <p className="page-subtitle">{resources.length} resources available</p>
+          <p className="page-subtitle">{resources.filter(r => r.status === 'available').length} resources available</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
           {isAdmin && (

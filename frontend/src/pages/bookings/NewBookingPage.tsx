@@ -58,7 +58,10 @@ export function NewBookingPage() {
   }, []);
 
   const selectedResource = resources.find(r => r.id === resourceId);
-  const filteredResources = isStudent ? resources.filter(r => r.category === 'EQUIPMENT' || r.category === 'ST_RESOURCE') : resources;
+  // ST_RESOURCE must use the ST Borrow flow (owner approval), so exclude from regular booking
+  const filteredResources = isStudent
+    ? resources.filter(r => r.category === 'EQUIPMENT')
+    : resources.filter(r => r.category !== 'ST_RESOURCE');
 
   // Calculate token cost
   const calculateTokenCost = () => {

@@ -180,7 +180,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       if (end_date) query = query.lte("end_time", end_date);
 
       let { data, count, error } = await query
-        .order("start_time", { ascending: true })
+        .order("created_at", { ascending: false })
         .range(offset, offset + limitNum - 1);
 
       // If the rich join failed (PostgREST FK ambiguity), fall back to simple select
@@ -198,7 +198,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
         if (start_date) fallbackQuery = fallbackQuery.gte("start_time", start_date);
         if (end_date) fallbackQuery = fallbackQuery.lte("end_time", end_date);
 
-        const fallback = await fallbackQuery.order("start_time", { ascending: true }).range(offset, offset + limitNum - 1);
+        const fallback = await fallbackQuery.order("created_at", { ascending: false }).range(offset, offset + limitNum - 1);
         if (fallback.error) throw fallback.error;
         data = fallback.data;
         count = fallback.count;
@@ -227,8 +227,11 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
 
       if (error || !data) throw ApiError.notFound("Booking");
 
+      // Allow the booking owner to always view their own booking (cross-tenant or cancelled)
+      const isBookingOwner = data.booked_by === request.user!.sub;
       if (
         request.user!.appRole !== "main_admin" &&
+        !isBookingOwner &&
         data.tenant_id !== request.user!.tenantId
       ) {
         throw ApiError.forbidden("This booking belongs to another faculty");
@@ -309,7 +312,15 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       if (resource.status !== "available")
         throw ApiError.badRequest(`Resource is currently ${resource.status}`);
 
-      // Student restriction — can only book EQUIPMENT and ST_RESOURCE
+      // ST_RESOURCE must use the ST borrow flow (/api/v1/st-resources/:id/borrow)
+      // so that the resource owner (student) can approve/reject the request.
+      if (resource.category === "ST_RESOURCE") {
+        throw ApiError.badRequest(
+          "Student Shared Resources must be booked through the ST Borrow system. Please use the ST Resources page to send a borrow request.",
+        );
+      }
+
+      // Student restriction — can only book EQUIPMENT
       if (!isCategoryBookableByRole(user.appRole, resource.category)) {
         throw ApiError.forbidden(
           "Students are only allowed to book EQUIPMENT and Student Shared resources.",

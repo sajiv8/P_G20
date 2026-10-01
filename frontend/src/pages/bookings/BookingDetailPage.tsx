@@ -30,25 +30,44 @@ export function BookingDetailPage() {
     }
   };
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     api.get<any>('/bookings/' + id)
       .then(res => {
-        setBooking(res.data);
-        if (res.data) {
+        if (res.success && res.data) {
+          setBooking(res.data);
           setEditForm({
             title: res.data.title,
             purpose: res.data.purpose || '',
             start_time: res.data.start_time.substring(0, 16),
             end_time: res.data.end_time.substring(0, 16),
           });
+        } else {
+          setError((res as any).error?.message || 'Booking not found');
         }
       })
-      .catch(console.error)
+      .catch(() => setError('Failed to load booking'))
       .finally(() => setLoading(false));
   }, [id]);
 
   if (loading) return <div style={{ padding: 'var(--space-8)' }}>Loading...</div>;
-  if (!booking) return <div style={{ padding: 'var(--space-8)' }}>Booking not found</div>;
+  if (!booking) return (
+    <div style={{ padding: 'var(--space-8)' }}>
+      <div className="card" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+        <CalendarDays size={40} style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }} />
+        <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-2)' }}>
+          {error || 'Booking not found'}
+        </h3>
+        <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>
+          This booking may have been removed or you may not have access to it.
+        </p>
+        <button className="btn btn-primary" onClick={() => navigate('/bookings')}>
+          <ArrowLeft size={16} /> Back to Bookings
+        </button>
+      </div>
+    </div>
+  );
 
   const resourceName = booking.resource?.name || booking.resources?.name || 'Unknown Resource';
 
