@@ -433,6 +433,16 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
             tenantId: resource.tenant_id,
           });
 
+          // Direct notification to displaced user
+          await createBookingNotification(
+            resource.tenant_id,
+            displaced.bookedBy,
+            "booking_bumped",
+            "Booking Displaced",
+            `Your booking was displaced by a higher-priority user.${refunded > 0 ? ` ${refunded} tokens have been refunded.` : ""}`,
+            { booking_id: displaced.id, tokens_refunded: refunded },
+          );
+
           logger.info(
             { bookingId: displaced.id, refunded, by: user.sub },
             "Booking bumped, owner refunded",
@@ -732,6 +742,16 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
         logger.warn({ err }, "Failed to publish cancellation event");
       }
 
+      // Direct notification to booking owner
+      await createBookingNotification(
+        data.tenant_id,
+        data.booked_by,
+        "booking_cancelled",
+        "Booking Cancelled",
+        `Your booking has been cancelled.${refunded > 0 ? ` ${refunded} tokens refunded.` : ""}`,
+        { booking_id: id },
+      );
+
       logger.info({ bookingId: id }, "Booking cancelled");
       sendSuccess(reply, data);
     },
@@ -851,6 +871,16 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
         } catch (err) {
           logger.warn({ err }, "Failed to publish edit event");
         }
+
+        // Direct notification to booking owner
+        await createBookingNotification(
+          data.tenant_id,
+          existing.booked_by,
+          "booking_updated",
+          "Booking Updated",
+          "Your booking has been modified by an admin.",
+          { booking_id: id, updated_by: user.sub },
+        );
       }
 
       logger.info({ bookingId: id }, "Booking edited");
@@ -987,6 +1017,17 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       } catch (err) {
         logger.warn({ err }, "Failed to publish status change event");
       }
+
+      // Direct notification to booking owner
+      const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+      await createBookingNotification(
+        data.tenant_id,
+        booking.booked_by,
+        `booking_${status}`,
+        `Booking ${statusLabel}`,
+        `Your booking status has been changed to ${status}.${reason ? " Reason: " + reason : ""}`,
+        { booking_id: id, previous_status: booking.status, new_status: status },
+      );
 
       logger.info(
         { bookingId: id, previousStatus: booking.status, newStatus: status, updatedBy: user.sub },
