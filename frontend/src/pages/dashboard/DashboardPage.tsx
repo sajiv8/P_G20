@@ -52,6 +52,7 @@ export function DashboardPage() {
         setStats({
           totalResources: Array.isArray(resources)
             ? resources.filter((r: any) => {
+                if (isAdmin) return true;
                 if (r.is_bookable === false || r.status !== 'available') return false;
                 // Students can only book EQUIPMENT through regular booking
                 if (isStudentRole && r.category !== 'EQUIPMENT') return false;
