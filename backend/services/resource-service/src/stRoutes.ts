@@ -26,7 +26,7 @@ export async function stResourceRoutes(server: FastifyInstance): Promise<void> {
   }, async (request, reply) => {
     const { search, mine, available } = request.query as Record<string, string>;
 
-    let query = supabase.from('st_resources').select('*').order('created_at', { ascending: false });
+    let query = supabase.from('st_resources').select('*, owner:user_profiles!created_by(member_id, full_name)').order('created_at', { ascending: false });
 
     if (mine === 'true') {
       query = query.eq('created_by', request.user!.sub);
@@ -38,8 +38,19 @@ export async function stResourceRoutes(server: FastifyInstance): Promise<void> {
       query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    let { data, error } = await query;
+
+    // Fallback if the join fails (PostgREST FK hint issue)
+    if (error) {
+      logger.warn({ error }, 'ST Resources rich query failed, falling back to simple select');
+      let fallbackQuery = supabase.from('st_resources').select('*').order('created_at', { ascending: false });
+      if (mine === 'true') fallbackQuery = fallbackQuery.eq('created_by', request.user!.sub);
+      if (available === 'true') fallbackQuery = fallbackQuery.eq('is_available', true);
+      if (search) fallbackQuery = fallbackQuery.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+      const fallback = await fallbackQuery;
+      if (fallback.error) throw fallback.error;
+      data = fallback.data;
+    }
 
     sendSuccess(reply, data || []);
   });

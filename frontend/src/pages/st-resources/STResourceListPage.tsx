@@ -18,6 +18,7 @@ interface STResource {
   created_by: string;
   created_at: string;
   image_url?: string;
+  owner?: { member_id?: string; full_name?: string };
 }
 
 const conditionColors: Record<string, { color: string; bg: string }> = {
@@ -224,6 +225,11 @@ export function STResourceListPage() {
                     <p className="card-hero-desc">{r.description}</p>
                   )}
                   <div className="card-hero-meta">
+                    {!isOwner && r.owner?.member_id && (
+                      <span className="card-hero-meta-item" style={{ background: 'rgba(168,85,247,0.1)', color: '#a855f7', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontWeight: 500, fontSize: 'var(--font-size-xs)' }}>
+                        Owner: {r.owner.member_id}
+                      </span>
+                    )}
                     {r.pickup_location && (
                       <span className="card-hero-meta-item"><MapPin size={12} /> {r.pickup_location}</span>
                     )}
