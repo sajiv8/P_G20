@@ -160,7 +160,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
         });
 
       // Tenant scoping
-      if (request.user!.appRole !== "main_admin") {
+      if (!['main_admin', 'lecturer', 'junior_lecturer'].includes(request.user!.appRole)) {
         if (my_bookings !== "true") {
           const tenantId = request.user!.tenantId;
           if (!tenantId || tenantId === "null" || tenantId === "undefined") {
@@ -187,7 +187,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       if (error) {
         logger.warn({ error }, "Bookings rich query failed, falling back to simple select");
         let fallbackQuery = supabase.from("bookings").select("*, resources(name, resource_type, location)", { count: "exact" });
-        if (request.user!.appRole !== "main_admin") {
+        if (!['main_admin', 'lecturer', 'junior_lecturer'].includes(request.user!.appRole)) {
           if (my_bookings !== "true") {
             fallbackQuery = fallbackQuery.eq("tenant_id", request.user!.tenantId!);
           }
@@ -230,7 +230,7 @@ export async function bookingRoutes(server: FastifyInstance): Promise<void> {
       // Allow the booking owner to always view their own booking (cross-tenant or cancelled)
       const isBookingOwner = data.booked_by === request.user!.sub;
       if (
-        request.user!.appRole !== "main_admin" &&
+        !['main_admin', 'lecturer', 'junior_lecturer'].includes(request.user!.appRole) &&
         !isBookingOwner &&
         data.tenant_id !== request.user!.tenantId
       ) {

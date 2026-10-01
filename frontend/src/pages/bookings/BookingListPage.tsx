@@ -51,7 +51,7 @@ export function BookingListPage() {
   const { claims } = useAuth();
   const { toast } = useToast();
   const isAdmin =
-    claims?.app_role === "main_admin" || claims?.app_role === "tenant_admin";
+    ["main_admin", "tenant_admin", "lecturer", "junior_lecturer"].includes(claims?.app_role || "");
 
   const loadBookings = async () => {
     // Auto-transition booking statuses (approved→active, active→completed)

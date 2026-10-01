@@ -37,7 +37,7 @@ export function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
-        const isAdmin = claims?.app_role === 'main_admin' || claims?.app_role === 'tenant_admin';
+        const isAdmin = ['main_admin', 'tenant_admin', 'lecturer', 'junior_lecturer'].includes(claims?.app_role || '');
         const params = isAdmin ? '' : '?my_bookings=true';
 
         const [resourcesRes, bookingsRes] = await Promise.all([
