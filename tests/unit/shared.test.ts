@@ -3,7 +3,7 @@ describe('Shared Library Basic Tests', () => {
     const err = new Error('Not Found');
     Object.assign(err, { statusCode: 404 });
     expect(err.message).toBe('Not Found');
-    expect(err['statusCode']).toBe(404);
+    expect((err as Error & { statusCode?: number }).statusCode).toBe(404);
   });
 
   it('TC-SHARED-002: mock test: role verification logic', () => {

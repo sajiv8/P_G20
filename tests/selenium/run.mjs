@@ -105,7 +105,11 @@ async function runJourney(browser, credentials) {
     recorder.check('TC-GUI-01 redirects to login when signed out', redirected.includes('/login'));
 
     // 2. The login form renders
-    const heading = await driver.findElement(By.css('.auth-title')).getText();
+    // The card fades in from opacity 0, and WebDriver reports no text for an
+    // element it considers hidden, so wait until the heading is visible.
+    const title = await driver.findElement(By.css('.auth-title'));
+    await driver.wait(until.elementIsVisible(title), TIMEOUT);
+    const heading = await title.getText();
     recorder.check('login form renders', heading.includes('Welcome Back'), heading);
 
     // 3. Sign in

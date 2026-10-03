@@ -22,13 +22,13 @@ describe('User Profile Service Basic Tests', () => {
   });
 
   it('TC-USER-005: should verify student does not have admin permissions', () => {
-    const role = 'student';
+    const role: string = 'student';
     const isAdmin = role === 'main_admin' || role === 'tenant_admin';
     expect(isAdmin).toBe(false);
   });
 
   it('TC-USER-006: should verify tenant_admin has admin permissions', () => {
-    const role = 'tenant_admin';
+    const role: string = 'tenant_admin';
     const isAdmin = role === 'main_admin' || role === 'tenant_admin';
     expect(isAdmin).toBe(true);
   });

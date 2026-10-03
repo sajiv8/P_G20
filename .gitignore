@@ -171,3 +171,6 @@ tests/security/reports/
 # Real SUS responses (keep participant data out of git)
 tests/usability/responses.csv
 *.md
+
+# Demo video assets (slides, clips, previews) — kept local, not for Git
+demo-video/
