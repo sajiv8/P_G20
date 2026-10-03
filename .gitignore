@@ -174,3 +174,5 @@ tests/usability/responses.csv
 
 # Demo video assets (slides, clips, previews) — kept local, not for Git
 demo-video/
+
+backend/docs/
