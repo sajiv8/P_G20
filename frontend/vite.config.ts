@@ -6,12 +6,12 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api/v1/tenants': { target: 'http://localhost:3001', changeOrigin: true },
-      '/api/v1/users': { target: 'http://localhost:3002', changeOrigin: true },
-      '/api/v1/resources': { target: 'http://localhost:3003', changeOrigin: true },
-      '/api/v1/st-resources': { target: 'http://localhost:3003', changeOrigin: true },
-      '/api/v1/bookings': { target: 'http://localhost:3004', changeOrigin: true },
-      '/api/v1/notifications': { target: 'http://localhost:3005', changeOrigin: true },
+      '/api/v1/tenants': { target: 'http://localhost:80', changeOrigin: true },
+      '/api/v1/users': { target: 'http://localhost:80', changeOrigin: true },
+      '/api/v1/resources': { target: 'http://localhost:80', changeOrigin: true },
+      '/api/v1/st-resources': { target: 'http://localhost:80', changeOrigin: true },
+      '/api/v1/bookings': { target: 'http://localhost:80', changeOrigin: true },
+      '/api/v1/notifications': { target: 'http://localhost:80', changeOrigin: true },
       '/uploads': {
         target: 'http://localhost:80',
         changeOrigin: true,
