@@ -626,7 +626,7 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
 
     if (!role) throw ApiError.badRequest('role is required');
 
-    const validRoles = ['student', 'lecturer', 'tenant_admin', 'staff'];
+    const validRoles = ['student', 'lecturer', 'junior_lecturer', 'tenant_admin', 'staff'];
     if (request.user!.appRole !== 'main_admin') {
       // Tenant admins can't create main_admins
       if (role === 'main_admin') throw ApiError.forbidden('Only main_admin can assign main_admin role');
