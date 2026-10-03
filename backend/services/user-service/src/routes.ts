@@ -176,7 +176,7 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     }
 
     // Double check they aren't already verified
-    if ((user as any).email_verified) {
+    if (user.emailVerified) {
       throw ApiError.badRequest('Email is already verified.');
     }
 
@@ -274,15 +274,9 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
 
     logger.info({ uid: user.sub, tenantId: tenant.id }, 'User signed up');
 
-    // Publish event for notification service
+    // Publish verification email event (NOT a user.signup event — welcome email
+    // must only be sent after email verification, see POST /api/v1/users/welcome).
     try {
-      await publishEvent('system-events', {
-        type: 'user.signup',
-        payload: { uid: user.sub, email: user.email || '', full_name: full_name || '', tenant_name: tenant.name },
-        timestamp: new Date().toISOString(),
-        tenantId: tenant.id,
-      });
-
       if (user.email) {
         const { getAuth } = await import('firebase-admin/auth');
         const link = await getAuth().generateEmailVerificationLink(user.email);
@@ -294,7 +288,7 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
         });
       }
     } catch (err) {
-      logger.warn({ err }, 'Failed to publish events (non-fatal)');
+      logger.warn({ err }, 'Failed to publish verification email event (non-fatal)');
     }
 
     sendSuccess(reply, {
@@ -302,6 +296,88 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
       claims_set: true,
       message: 'Profile created. Call getIdToken(true) to refresh your token.',
     }, 201);
+  });
+
+  // ========================================================================
+  // POST /api/v1/users/welcome — Send welcome email AFTER email verification
+  //
+  // The frontend calls this once the user returns from the Firebase
+  // verification link and user.reload() confirms emailVerified === true.
+  // The backend independently checks the Firebase ID token's email_verified
+  // claim (populated by the auth middleware) and uses the JSONB metadata
+  // column as an idempotency guard to ensure the welcome email is sent
+  // exactly once.
+  // ========================================================================
+  server.post('/api/v1/users/welcome', {
+    preHandler: [authMiddleware],
+  }, async (request, reply) => {
+    const user = request.user!;
+
+    // ── Security: authoritative check from Firebase ID token ──
+    if (!user.emailVerified) {
+      throw ApiError.forbidden('Email must be verified before the welcome message can be sent.');
+    }
+
+    // ── Idempotency: use the JSONB metadata column ──
+    const { data: profile, error: profileErr } = await supabase
+      .from('user_profiles')
+      .select('firebase_uid, email, full_name, tenant_id, metadata')
+      .eq('firebase_uid', user.sub)
+      .single();
+
+    if (profileErr || !profile) {
+      throw ApiError.notFound('User profile');
+    }
+
+    const meta = (profile.metadata || {}) as Record<string, unknown>;
+    if (meta.welcome_email_sent === true) {
+      // Already sent — return success without re-sending
+      logger.debug({ uid: user.sub }, 'Welcome email already sent — skipping');
+      sendSuccess(reply, { message: 'Welcome message already sent.', already_sent: true });
+      return;
+    }
+
+    // ── Mark as sent BEFORE dispatching to avoid race conditions ──
+    const { error: updateErr } = await supabase
+      .from('user_profiles')
+      .update({ metadata: { ...meta, welcome_email_sent: true } })
+      .eq('firebase_uid', user.sub);
+
+    if (updateErr) {
+      logger.error({ err: updateErr, uid: user.sub }, 'Failed to set welcome_email_sent flag');
+      // Continue — better to risk a duplicate than to never send
+    }
+
+    // ── Fetch tenant name for the email ──
+    let tenantName = 'your faculty';
+    if (profile.tenant_id) {
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('name')
+        .eq('id', profile.tenant_id)
+        .single();
+      if (tenant) tenantName = tenant.name;
+    }
+
+    // ── Publish the user.signup event NOW (post-verification) ──
+    try {
+      await publishEvent('system-events', {
+        type: 'user.signup',
+        payload: {
+          uid: user.sub,
+          email: profile.email || '',
+          full_name: profile.full_name || '',
+          tenant_name: tenantName,
+        },
+        timestamp: new Date().toISOString(),
+        tenantId: profile.tenant_id || 'system',
+      });
+    } catch (err) {
+      logger.warn({ err, uid: user.sub }, 'Failed to publish user.signup event for welcome email (non-fatal)');
+    }
+
+    logger.info({ uid: user.sub }, 'Welcome email triggered after email verification');
+    sendSuccess(reply, { message: 'Welcome message sent.', already_sent: false });
   });
 
   // ========================================================================
@@ -483,7 +559,7 @@ export async function userRoutes(server: FastifyInstance): Promise<void> {
     // Users can view themselves; admins can view anyone in their tenant
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('*')
+      .select('*, tenants(name)')
       .eq('firebase_uid', uid)
       .single();
 

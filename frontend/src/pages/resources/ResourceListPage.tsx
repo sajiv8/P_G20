@@ -16,6 +16,8 @@ interface Resource {
   created_by?: string;
   hourly_cost?: number;
   image_url?: string;
+  tenants?: { name: string };
+  creator?: { member_id?: string; full_name?: string };
 }
 
 const typeIcons: Record<string, any> = {
@@ -39,6 +41,11 @@ export function ResourceListPage() {
   const isStudent = claims?.app_role === 'student';
   const isLecturerOrAbove = ['main_admin', 'tenant_admin', 'lecturer', 'junior_lecturer'].includes(claims?.app_role || '');
 
+  // Students only see equipment — lock the filter
+  useEffect(() => {
+    if (isStudent) setTypeFilter('equipment');
+  }, [isStudent]);
+
   useEffect(() => {
     api.get<Resource[]>('/resources/').then(res => {
       setResources(Array.isArray(res.data) ? res.data : []);
@@ -49,7 +56,9 @@ export function ResourceListPage() {
     const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) ||
       r.location?.toLowerCase().includes(search.toLowerCase());
     const matchType = typeFilter === 'all' || r.resource_type === typeFilter;
-    return matchSearch && matchType;
+    // Students can only see equipment resources
+    const matchStudentRestriction = !isStudent || r.category === 'EQUIPMENT';
+    return matchSearch && matchType && matchStudentRestriction;
   });
 
   const types = ['all', 'lab', 'lecture_hall', 'equipment', 'meeting_room', 'student_resource', 'other'];
@@ -105,7 +114,7 @@ export function ResourceListPage() {
       <div className="page-header">
         <div>
           <h2 className="page-title">Resources</h2>
-          <p className="page-subtitle">{resources.length} resources available</p>
+          <p className="page-subtitle">{filtered.length} resources available</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
           {isAdmin && (
@@ -121,13 +130,15 @@ export function ResourceListPage() {
           <Search size={18} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
           <input className="input" placeholder="Search resources..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft: 40 }} />
         </div>
-        <div className="tabs" style={{ overflowX: 'auto' }}>
-          {types.map(t => (
-            <button key={t} className={`tab ${typeFilter === t ? 'tab-active' : ''}`} onClick={() => setTypeFilter(t)}>
-              {typeLabels[t] || t}
-            </button>
-          ))}
-        </div>
+        {!isStudent && (
+          <div className="tabs" style={{ overflowX: 'auto' }}>
+            {types.map(t => (
+              <button key={t} className={`tab ${typeFilter === t ? 'tab-active' : ''}`} onClick={() => setTypeFilter(t)}>
+                {typeLabels[t] || t}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {filtered.length === 0 ? (
@@ -202,6 +213,16 @@ export function ResourceListPage() {
                     {r.description || `${(typeLabels[r.resource_type] || r.resource_type)} resource`}
                   </p>
                   <div className="card-hero-meta">
+                    {r.tenants?.name && (
+                      <span className="card-hero-meta-item" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontWeight: 500, fontSize: 'var(--font-size-xs)' }}>
+                        {r.tenants.name}
+                      </span>
+                    )}
+                    {r.category === 'ST_RESOURCE' && r.creator?.member_id && (
+                      <span className="card-hero-meta-item" style={{ background: 'rgba(168,85,247,0.1)', color: '#a855f7', padding: '2px 8px', borderRadius: 'var(--radius-sm)', fontWeight: 500, fontSize: 'var(--font-size-xs)' }}>
+                        Owner: {r.creator.member_id}
+                      </span>
+                    )}
                     {r.location && (
                       <span className="card-hero-meta-item"><MapPin size={12} /> {r.location}</span>
                     )}

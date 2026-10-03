@@ -47,13 +47,15 @@ export function ResourceDetailPage() {
   const navigate = useNavigate();
   const { claims } = useAuth();
   const { toast } = useToast();
-  const isAdmin = claims.app_role === 'super_admin' || claims.app_role === 'tenant_admin';
+  const isAdmin = claims.app_role === 'main_admin' || claims.app_role === 'tenant_admin';
 
   const [resource, setResource] = useState<Resource | null>(null);
   const [todayBookings, setTodayBookings] = useState<AvailabilityBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
 
   // Edit form state
   const [editName, setEditName] = useState('');
@@ -65,10 +67,7 @@ export function ResourceDetailPage() {
   useEffect(() => {
     if (!id) return;
 
-    Promise.all([
-      api.get<Resource>(`/resources/${id}`),
-      api.get<{ bookings: AvailabilityBooking[] }>(`/resources/${id}/availability`),
-    ]).then(([resRes, availRes]) => {
+    api.get<Resource>(`/resources/${id}`).then(resRes => {
       if (resRes.success && resRes.data) {
         const r = resRes.data as Resource;
         setResource(r);
@@ -81,13 +80,22 @@ export function ResourceDetailPage() {
         toast('error', 'Resource not found');
         navigate('/resources');
       }
-
-      if (availRes.success && availRes.data) {
-        const d = availRes.data as any;
-        setTodayBookings(Array.isArray(d.bookings) ? d.bookings : []);
-      }
     }).finally(() => setLoading(false));
   }, [id]);
+
+  // Fetch schedule for selected date
+  useEffect(() => {
+    if (!id) return;
+    setScheduleLoading(true);
+    api.get<{ bookings: AvailabilityBooking[] }>(`/resources/${id}/availability?date=${scheduleDate}`)
+      .then(availRes => {
+        if (availRes.success && availRes.data) {
+          const d = availRes.data as any;
+          setTodayBookings(Array.isArray(d.bookings) ? d.bookings : []);
+        }
+      })
+      .finally(() => setScheduleLoading(false));
+  }, [id, scheduleDate]);
 
   const handleSave = async () => {
     if (!id) return;
@@ -285,38 +293,82 @@ export function ResourceDetailPage() {
           )}
         </div>
 
-        {/* Today's Bookings */}
+        {/* Resource Schedule — Browse by Date */}
         <div className="card">
           <div className="card-header">
-            <h3 className="card-title">Today's Schedule</h3>
+            <h3 className="card-title">Schedule</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => {
+                const d = new Date(scheduleDate);
+                d.setDate(d.getDate() - 1);
+                setScheduleDate(d.toISOString().split('T')[0]);
+              }}>←</button>
+              <input
+                type="date"
+                className="input"
+                value={scheduleDate}
+                onChange={e => setScheduleDate(e.target.value)}
+                style={{ padding: '4px 8px', fontSize: 'var(--font-size-xs)', width: 140 }}
+              />
+              <button className="btn btn-ghost btn-sm" onClick={() => {
+                const d = new Date(scheduleDate);
+                d.setDate(d.getDate() + 1);
+                setScheduleDate(d.toISOString().split('T')[0]);
+              }}>→</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setScheduleDate(new Date().toISOString().split('T')[0])}
+                style={{ fontSize: 'var(--font-size-xs)' }}>Today</button>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 'var(--space-3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
+              {new Date(scheduleDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
             <button className="btn btn-primary btn-sm" onClick={() => navigate(`/bookings/new?resource=${id}`)}>
               <CalendarDays size={14} /> Book Now
             </button>
           </div>
 
-          {todayBookings.length === 0 ? (
+          {scheduleLoading ? (
+            <div style={{ textAlign: 'center', padding: 'var(--space-4)', color: 'var(--color-text-muted)' }}>
+              Loading schedule...
+            </div>
+          ) : todayBookings.length === 0 ? (
             <div className="empty-state">
-              <CalendarDays size={32} className="empty-state-icon" />
-              <p className="empty-state-title">No bookings today</p>
-              <p style={{ fontSize: 'var(--font-size-sm)' }}>This resource is available all day</p>
+              <CheckCircle2 size={32} style={{ color: 'var(--color-success)' }} />
+              <p className="empty-state-title">Available All Day</p>
+              <p style={{ fontSize: 'var(--font-size-sm)' }}>No bookings on this date — all timeslots are free</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              {todayBookings.map(b => (
-                <div key={b.id} style={{
-                  display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-                  padding: 'var(--space-3)',
-                  background: 'var(--color-bg-glass)', borderRadius: 'var(--radius-md)',
-                  flexWrap: 'wrap',
-                }}>
-                  <Clock size={14} style={{ color: 'var(--color-text-muted)', flexShrink: 0 }} />
-                  <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                    {format(new Date(b.start_time), 'h:mm a')} – {format(new Date(b.end_time), 'h:mm a')}
-                  </span>
-                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</span>
-                  <span className={`badge ${b.status === 'approved' ? 'badge-success' : 'badge-warning'}`}>{b.status}</span>
-                </div>
-              ))}
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginBottom: 'var(--space-1)' }}>
+                {todayBookings.length} booking{todayBookings.length !== 1 ? 's' : ''} — these timeslots are unavailable:
+              </div>
+              {todayBookings.map(b => {
+                const statusStyle: Record<string, { bg: string; border: string; color: string }> = {
+                  approved: { bg: 'rgba(16,185,129,0.08)', border: '#10b981', color: '#059669' },
+                  pending: { bg: 'rgba(245,158,11,0.08)', border: '#f59e0b', color: '#d97706' },
+                  active: { bg: 'rgba(59,130,246,0.08)', border: '#3b82f6', color: '#2563eb' },
+                };
+                const s = statusStyle[b.status] || statusStyle.pending;
+                return (
+                  <div key={b.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+                    padding: 'var(--space-3)',
+                    background: s.bg,
+                    borderLeft: `3px solid ${s.border}`,
+                    borderRadius: 'var(--radius-md)',
+                    flexWrap: 'wrap',
+                  }}>
+                    <Clock size={14} style={{ color: s.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 700, whiteSpace: 'nowrap', color: s.color }}>
+                      {format(new Date(b.start_time), 'h:mm a')} – {format(new Date(b.end_time), 'h:mm a')}
+                    </span>
+                    <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.title}</span>
+                    <span className={`badge ${b.status === 'approved' ? 'badge-success' : b.status === 'active' ? 'badge-primary' : 'badge-warning'}`}>{b.status}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

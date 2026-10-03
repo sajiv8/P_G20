@@ -31,7 +31,7 @@ export async function resourceRoutes(server: FastifyInstance): Promise<void> {
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
     const offset = (pageNum - 1) * limitNum;
 
-    let query = supabase.from('resources').select('*', { count: 'exact' });
+    let query = supabase.from('resources').select('*, tenants(name), creator:user_profiles!created_by(member_id, full_name)', { count: 'exact' });
 
     // Tenant scoping — only tenant_admin sees their own tenant's resources
     // All other users (students, lecturers, staff, main_admin) see all resources
@@ -48,11 +48,27 @@ export async function resourceRoutes(server: FastifyInstance): Promise<void> {
     if (is_bookable !== undefined) query = query.eq('is_bookable', is_bookable === 'true');
     if (search) query = query.or(`name.ilike.%${search}%,location.ilike.%${search}%`);
 
-    const { data, count, error } = await query
+    let { data, count, error } = await query
       .order('name')
       .range(offset, offset + limitNum - 1);
 
-    if (error) throw error;
+    // If the rich join failed (PostgREST FK hint issue), fall back to simple select
+    if (error) {
+      logger.warn({ error }, 'Resources rich query failed, falling back to simple select');
+      let fallbackQuery = supabase.from('resources').select('*', { count: 'exact' });
+      if (request.user!.appRole === 'tenant_admin') {
+        fallbackQuery = fallbackQuery.eq('tenant_id', request.user!.tenantId!);
+      }
+      if (type) fallbackQuery = fallbackQuery.eq('resource_type', type);
+      if (status) fallbackQuery = fallbackQuery.eq('status', status);
+      if (is_bookable !== undefined) fallbackQuery = fallbackQuery.eq('is_bookable', is_bookable === 'true');
+      if (search) fallbackQuery = fallbackQuery.or(`name.ilike.%${search}%,location.ilike.%${search}%`);
+
+      const fallback = await fallbackQuery.order('name').range(offset, offset + limitNum - 1);
+      if (fallback.error) throw fallback.error;
+      data = fallback.data;
+      count = fallback.count;
+    }
 
     sendPaginated(reply, data || [], count || 0, pageNum, limitNum);
   });
@@ -355,7 +371,7 @@ export async function resourceRoutes(server: FastifyInstance): Promise<void> {
       .from('bookings')
       .select('id, title, start_time, end_time, status, booked_by')
       .eq('resource_id', id)
-      .in('status', ['pending', 'approved'])
+      .in('status', ['pending', 'approved', 'active'])
       .gte('start_time', dayStart)
       .lte('start_time', dayEnd)
       .order('start_time');

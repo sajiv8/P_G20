@@ -37,8 +37,18 @@ export function VerifyEmailPage() {
       await auth.currentUser.reload();
       
       if (auth.currentUser.emailVerified) {
-        // Force token refresh so claims/routes update
+        // Force token refresh so the ID token contains email_verified=true
         await auth.currentUser.getIdToken(true);
+
+        // Call backend to trigger welcome email (backend checks email_verified
+        // from the Firebase ID token and sends welcome email only once)
+        try {
+          await api.post('/users/welcome');
+        } catch (welcomeErr) {
+          // Non-blocking: user can still enter the app even if welcome email fails
+          console.warn('Welcome email request failed (non-blocking):', welcomeErr);
+        }
+
         toast('success', 'Email verified! Redirecting to dashboard...');
         // Small delay for the toast to show
         setTimeout(() => navigate('/', { replace: true }), 500);

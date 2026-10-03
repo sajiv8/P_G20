@@ -8,6 +8,7 @@
 export interface TestUser {
   sub: string;
   email?: string;
+  emailVerified?: boolean;
   tenantId: string | null;
   appRole: string;
 }

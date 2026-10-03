@@ -11,7 +11,7 @@ export function BookingDetailPage() {
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { claims } = useAuth();
+  const { claims, user: authUser } = useAuth();
   const { toast } = useToast();
   const isAdmin = claims?.app_role === 'main_admin' || claims?.app_role === 'tenant_admin';
 
@@ -30,25 +30,44 @@ export function BookingDetailPage() {
     }
   };
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     api.get<any>('/bookings/' + id)
       .then(res => {
-        setBooking(res.data);
-        if (res.data) {
+        if (res.success && res.data) {
+          setBooking(res.data);
           setEditForm({
             title: res.data.title,
             purpose: res.data.purpose || '',
             start_time: res.data.start_time.substring(0, 16),
             end_time: res.data.end_time.substring(0, 16),
           });
+        } else {
+          setError((res as any).error?.message || 'Booking not found');
         }
       })
-      .catch(console.error)
+      .catch(() => setError('Failed to load booking'))
       .finally(() => setLoading(false));
   }, [id]);
 
   if (loading) return <div style={{ padding: 'var(--space-8)' }}>Loading...</div>;
-  if (!booking) return <div style={{ padding: 'var(--space-8)' }}>Booking not found</div>;
+  if (!booking) return (
+    <div style={{ padding: 'var(--space-8)' }}>
+      <div className="card" style={{ textAlign: 'center', padding: 'var(--space-8)' }}>
+        <CalendarDays size={40} style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }} />
+        <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: 600, marginBottom: 'var(--space-2)' }}>
+          {error || 'Booking not found'}
+        </h3>
+        <p style={{ color: 'var(--color-text-muted)', marginBottom: 'var(--space-4)' }}>
+          This booking may have been removed or you may not have access to it.
+        </p>
+        <button className="btn btn-primary" onClick={() => navigate('/bookings')}>
+          <ArrowLeft size={16} /> Back to Bookings
+        </button>
+      </div>
+    </div>
+  );
 
   const resourceName = booking.resource?.name || booking.resources?.name || 'Unknown Resource';
 
@@ -60,7 +79,12 @@ export function BookingDetailPage() {
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
           <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: 700, wordBreak: 'break-word' }}>{booking.title}</h2>
-          {isAdmin && (
+          {isAdmin && (booking.status === 'pending' || booking.status === 'approved') && (
+            <button className="btn btn-outline btn-sm" onClick={() => setShowEdit(true)}>
+              <Edit2 size={16} /> Edit Booking
+            </button>
+          )}
+          {!isAdmin && booking.status === 'pending' && booking.booked_by === authUser?.uid && (
             <button className="btn btn-outline btn-sm" onClick={() => setShowEdit(true)}>
               <Edit2 size={16} /> Edit Booking
             </button>
@@ -70,6 +94,13 @@ export function BookingDetailPage() {
           <div>
             <p style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>Resource</p>
             <p style={{ fontWeight: 600, fontSize: 'var(--font-size-lg)' }}>{resourceName}</p>
+            <div style={{ display: 'flex', gap: 'var(--space-2)', marginTop: 'var(--space-2)', flexWrap: 'wrap' }}>
+              {(booking.resources?.location) && (
+                <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  📍 {booking.resources.location}
+                </span>
+              )}
+            </div>
           </div>
           <div>
             <p style={{ color: 'var(--color-text-secondary)', marginBottom: 4 }}>Status</p>

@@ -13,6 +13,7 @@ interface Resource {
   capacity: number;
   location: string;
   hourly_cost: number | null;
+  tenants?: { name: string };
 }
 
 export function NewBookingPage() {
@@ -58,7 +59,10 @@ export function NewBookingPage() {
   }, []);
 
   const selectedResource = resources.find(r => r.id === resourceId);
-  const filteredResources = isStudent ? resources.filter(r => r.category === 'EQUIPMENT' || r.category === 'ST_RESOURCE') : resources;
+  // ST_RESOURCE must use the ST Borrow flow (owner approval), so exclude from regular booking
+  const filteredResources = isStudent
+    ? resources.filter(r => r.category === 'EQUIPMENT')
+    : resources.filter(r => r.category !== 'ST_RESOURCE');
 
   // Calculate token cost
   const calculateTokenCost = () => {
@@ -184,7 +188,7 @@ export function NewBookingPage() {
               {isStudent && (
                 <div style={{ padding: 'var(--space-3)', background: 'var(--color-warning-light)', color: '#b45309', borderRadius: 'var(--radius-md)', marginBottom: 'var(--space-4)', fontSize: 'var(--font-size-sm)' }}>
                   <Coins size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }} />
-                  As a student, you can book EQUIPMENT and Student Shared (ST) resources. Tokens are deducted based on hourly rate × duration.
+                  As a student, you can book equipment resources here. For Student Shared (ST) resources, use the ST Resources page to send a borrow request.
                 </div>
               )}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
@@ -209,11 +213,16 @@ export function NewBookingPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
                         <div style={{ fontWeight: 600 }}>{r.name}</div>
-                        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 2 }}>
-                          {r.category} · {r.location} · {r.capacity} seats
+                        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                          <span>{r.location} · {r.capacity} seats</span>
+                          {r.tenants?.name && (
+                            <span style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', padding: '1px 6px', borderRadius: 'var(--radius-sm)', fontWeight: 500 }}>
+                              {r.tenants.name}
+                            </span>
+                          )}
                           {isStudent && r.hourly_cost ? (
                             <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
-                              {' '}· <Coins size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> {r.hourly_cost} tokens/hr
+                              <Coins size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> {r.hourly_cost} tokens/hr
                             </span>
                           ) : null}
                         </div>
