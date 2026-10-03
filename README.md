@@ -1,56 +1,88 @@
-# Multi-Tenant Campus Resource Sharing Platform
+# 🏫 CampusRSO — Multi-Tenant Campus Resource Sharing & Optimization Platform
 
-A microservices-based platform for managing shared resources (lecture halls, labs, equipment) across university faculties with multi-tenant isolation, booking conflict prevention, and real-time notifications.
+A full-stack, microservices-based platform for managing shared university resources (lecture halls, laboratories, equipment) across multiple faculties. Features multi-tenant isolation, booking conflict prevention via PostgreSQL exclusion constraints, a student token economy, peer-to-peer resource sharing, real-time notifications, and an optimization engine.
+
+---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Nginx Gateway (:80/:443)           │
-│           Rate Limiting + TLS Termination            │
-├─────────┬──────────┬───────────┬──────────┬─────────┤
-│ Tenant  │  User    │ Resource  │ Booking  │ Notify  │
-│ Service │ Service  │ Service   │ Service  │ Service │
-│  :3001  │  :3002   │  :3003    │  :3004   │  :3005  │
-├─────────┴──────────┴───────────┴──────────┴─────────┤
-│              @rso/shared (common lib)                │
-├──────────────────────┬──────────────────────────────┤
-│    Supabase (DB)     │         Redis (Events)        │
-└──────────────────────┴──────────────────────────────┘
+┌──────────────────────── Client ────────────────────────┐
+│             React SPA (Vite + TypeScript)               │
+└──────────────────────────┬─────────────────────────────┘
+                           │
+┌──────────────────────────▼─────────────────────────────┐
+│              Nginx API Gateway (:80 / :443)             │
+│         Rate Limiting · TLS Termination · CORS          │
+├─────────┬──────────┬───────────┬──────────┬────────────┤
+│ Tenant  │  User    │ Resource  │ Booking  │ Notification│
+│ Service │ Service  │ Service   │ & Optim. │  Service    │
+│  :3001  │  :3002   │  :3003    │  :3004   │  :3005     │
+├─────────┴──────────┴───────────┴──────────┴────────────┤
+│                @rso/shared (common library)             │
+│   Auth Middleware · Supabase Client · Redis Client      │
+│   Role Guard · Error Handler · Logger · Types           │
+├────────────────────────┬───────────────────────────────┤
+│  Supabase (PostgreSQL) │       Redis (Streams)          │
+│  RLS · Exclusion GiST  │  Event-Driven Pub/Sub          │
+└────────────────────────┴───────────────────────────────┘
 ```
 
-### Services
+---
 
-| Service | Port | Purpose |
-|---------|------|---------|
-| **Tenant** | 3001 | Faculty/department CRUD |
-| **User** | 3002 | Profiles, signup, role management, Firebase claims |
-| **Resource** | 3003 | Resource catalog, availability checks |
-| **Booking** | 3004 | Booking CRUD, approve/reject workflow, conflict detection |
-| **Notification** | 3005 | In-app notifications, email via Nodemailer + Gmail, Redis event consumer |
-| **Gateway** | 80/443 | Nginx reverse proxy, rate limiting, TLS |
-| **Redis** | 6379 | Event streaming between services |
+## Tech Stack
 
-### Tech Stack
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 19, Vite 8, TypeScript, React Router 7, Recharts, Lucide Icons |
+| **Backend** | Node.js 22, Fastify, TypeScript, NPM Workspaces (monorepo) |
+| **Database** | PostgreSQL (Supabase) — RLS, GiST exclusion constraints, `pgcrypto` |
+| **Authentication** | Firebase Authentication + Custom Claims (JWT) |
+| **Message Broker** | Redis Streams (async event-driven pub/sub) |
+| **Email** | Nodemailer (Gmail SMTP with App Password) |
+| **API Gateway** | Nginx — reverse proxy, rate limiting (3 zones), TLS termination |
+| **Containers** | Docker, Docker Compose |
+| **CI/CD** | GitHub Actions (CI + E2E pipelines) |
+| **Orchestration** | Kubernetes (Kustomize) + ArgoCD (GitOps) |
+| **DNS / TLS** | Cloudflare (Origin Certificate, Full Strict mode) |
+| **Testing** | Cypress (E2E/GUI), Jest (Unit), Postman/Newman (API), Selenium (Cross-browser), JMeter (Load), axe-core (Accessibility), OWASP ZAP (Security) |
 
-- **Runtime:** Node.js 22 + TypeScript + Fastify
-- **Database:** Supabase (PostgreSQL) with Row Level Security
-- **Auth:** Firebase Authentication + Custom Claims
-- **Events:** Redis Streams (pub/sub)
-- **Email:** Nodemailer (Gmail SMTP)
-- **Gateway:** Nginx with rate limiting
-- **Containers:** Docker + Docker Compose
-- **DNS/TLS:** Cloudflare (Origin Certificate, Full Strict mode)
+---
+
+## Services
+
+| Service | Port | Responsibility |
+|---------|------|----------------|
+| **Tenant Service** | 3001 | Faculty/department CRUD, tenant onboarding |
+| **User Service** | 3002 | Profile sync, signup, role management, Firebase custom claims, avatar upload |
+| **Resource Service** | 3003 | Resource catalog, availability checks, student P2P shared resources (`st-resources`), P2P borrowing (`st-bookings`) |
+| **Booking & Optimization** | 3004 | Booking CRUD, approve/reject workflow, overlap prevention, optimization engine, student token deduction |
+| **Notification Service** | 3005 | In-app notifications, email dispatch via Gmail SMTP, Redis Streams event consumer |
+| **Nginx Gateway** | 80/443 | Reverse proxy, rate limiting, TLS, security headers |
+| **Redis** | 6379 | Event streaming between services (`booking-events`, `system-events`) |
+
+---
+
+## RBAC (Role-Based Access Control)
+
+| Role | Permissions |
+|------|-------------|
+| `student` | Browse all resources, create bookings (token-gated), manage own P2P shared items, borrow from peers |
+| `junior_lecturer` | Browse all resources across tenants, create bookings (no tenant isolation) |
+| `lecturer` | Same as junior_lecturer — full cross-tenant resource visibility |
+| `staff` | Browse tenant resources, create bookings |
+| `tenant_admin` | Manage resources, approve/reject bookings within own tenant, manage tenant users |
+| `main_admin` | Full access across all tenants, system-wide administration |
 
 ---
 
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) ≥ 22
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
-- A [Supabase](https://supabase.com/) project
-- A [Firebase](https://firebase.google.com/) project with Authentication enabled
-- A Gmail account for Nodemailer and a Firebase project with Authentication
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (for Docker mode)
+- A [Supabase](https://supabase.com/) project (PostgreSQL database)
+- A [Firebase](https://firebase.google.com/) project with Email/Password authentication enabled
+- A Gmail account with an [App Password](https://myaccount.google.com/apppasswords) for email notifications
 
 ---
 
@@ -60,65 +92,167 @@ A microservices-based platform for managing shared resources (lecture halls, lab
 
 ```bash
 git clone <repo-url>
-cd "Resource Share"
+cd P_G20
 npm install
 ```
 
 ### 2. Configure Environment
 
 ```bash
-cp infra/.env.example infra/.env
-# Edit infra/.env with your actual secrets
+cp .env.example .env
+# Edit .env with your actual secrets
 ```
 
-Required secrets:
-- **Firebase:** `FIREBASE_PROJECT_ID`, `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`
-- **Firebase Admin SDK:** Place your service account JSON at `config/firebase-service-account.json`
-- **Supabase:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET`
-- **Email System:** `MAIL_USER`, `MAIL_APP_PASSWORD`
+Required secrets in `.env`:
+
+| Variable | Description |
+|----------|-------------|
+| `FIREBASE_PROJECT_ID` | Firebase project ID |
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Path to service account JSON (default: `./firebase-service-account.json`) |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (bypasses RLS) |
+| `SUPABASE_ANON_KEY` | Supabase anonymous/public key |
+| `MAIL_USER` | Gmail address for notifications |
+| `MAIL_APP_PASSWORD` | Gmail App Password |
+| `REDIS_URL` | Redis connection string (default: `redis://localhost:6379`) |
+
+Frontend environment (in `frontend/.env`):
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_FIREBASE_API_KEY` | Firebase client API key |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase auth domain |
+| `VITE_FIREBASE_PROJECT_ID` | Firebase project ID |
+| `VITE_API_URL` | API base path (default: `/api/v1`) |
 
 ### 3. Run Database Migrations
 
-Apply the SQL migrations to your Supabase project via the [SQL Editor](https://supabase.com/dashboard/project/_/sql):
+Apply the combined migration script to your Supabase project via the [SQL Editor](https://supabase.com/dashboard/project/_/sql):
 
-Run each file in order from `supabase/migrations/`:
-1. `001_extensions.sql`
-2. `002_tenants.sql`
-3. `003_user_profiles.sql`
-4. `004_resources.sql`
-5. `005_bookings.sql`
-6. `006_notifications.sql`
-7. `007_optimization_logs.sql`
-8. `008_rls_policies.sql`
-9. `009_triggers_functions.sql`
+```bash
+# Run the single combined migration file:
+backend/supabase/combined_migration.sql
+```
+
+Or apply individual migrations in order from `backend/supabase/migrations/` (files `00001` through `00015`).
 
 ### 4. Configure Firebase
 
-1. Enable **Email/Password** and **Google** sign-in in Firebase Console → Authentication → Sign-in method
-2. Download the Admin SDK service account key and save as `config/firebase-service-account.json`
-3. See `docs/firebase-setup.md` for detailed instructions
+1. Enable **Email/Password** sign-in in Firebase Console → Authentication → Sign-in method
+2. Download the Admin SDK service account key and save as `firebase-service-account.json` in the project root
 
-### 5. Build and Run
+---
+
+## Running the Platform
+
+### Option 1: Local Development (without Docker)
+
+Uses Vite's dev proxy to route API requests directly to microservice ports.
 
 ```bash
-# Build all TypeScript services
-npm run build --workspaces
+# Start all services + frontend in watch mode
+npm run dev
 
-# Start with Docker Compose
-cd infra
+# Or use the batch script (Windows)
+start_platform.cmd
+```
+
+Access at: **http://localhost:5173**
+
+### Option 2: Docker Compose (Local)
+
+Spins up all containers including Redis, with Nginx reverse proxy routing.
+
+```bash
+# Build and start all containers
+docker compose -f docker-compose.local.yml up --build -d
+
+# View logs
+docker compose -f docker-compose.local.yml logs -f
+
+# Stop everything
+docker compose -f docker-compose.local.yml down
+```
+
+Access at: **http://localhost:5173**
+
+### Option 3: Production (Cloud / Kubernetes)
+
+Uses the full infrastructure stack with Nginx gateway, TLS, and rate limiting.
+
+```bash
+# Production Docker Compose (with Nginx gateway)
+cd backend/infra
 docker compose up -d
 ```
 
-### 6. Verify
+Or deploy via Kubernetes + ArgoCD using the manifests in `k8s/`.
 
-```bash
-# Gateway health check
-curl http://localhost/health
-# → {"status":"ok","gateway":"nginx"}
+---
 
-# All services return 401 (auth required) — correct!
-curl http://localhost/api/v1/tenants/
-# → {"success":false,"error":{"code":"AUTH_MISSING_TOKEN",...}}
+## Project Structure
+
+```
+P_G20/
+├── .github/workflows/           # CI/CD pipelines (ci.yml, e2e.yml)
+├── backend/
+│   ├── infra/                   # Production Docker Compose + Nginx Gateway
+│   │   ├── docker-compose.yml
+│   │   └── gateway/
+│   │       ├── nginx.conf       # Rate limiting, TLS, reverse proxy
+│   │       └── ssl/             # Cloudflare Origin Certificates
+│   ├── services/
+│   │   ├── shared/              # @rso/shared — common library
+│   │   │   └── src/
+│   │   │       ├── auth-middleware.ts   # Firebase JWT verification
+│   │   │       ├── supabase-client.ts   # DB client (service role)
+│   │   │       ├── redis-client.ts      # Redis Streams pub/sub
+│   │   │       ├── role-guard.ts        # RBAC enforcement
+│   │   │       ├── error-handler.ts     # Centralized error handling
+│   │   │       ├── cors-config.ts       # CORS configuration
+│   │   │       ├── logger.ts            # Pino structured logging
+│   │   │       └── types.ts             # Shared TypeScript types
+│   │   ├── tenant-service/      # Faculty/department management
+│   │   ├── user-service/        # Profile sync, roles, avatars
+│   │   ├── resource-service/    # Resources + ST Resources + ST Bookings
+│   │   ├── booking-service/     # Bookings, optimization, tokens
+│   │   └── notification-service/# Email dispatch, Redis event consumer
+│   └── supabase/
+│       ├── combined_migration.sql   # Single-file DB setup
+│       └── migrations/              # 18 ordered SQL migration files
+├── frontend/
+│   ├── src/
+│   │   ├── contexts/            # AuthContext (Firebase + claims)
+│   │   ├── lib/                 # API client (auto JWT injection)
+│   │   ├── pages/               # Dashboard, Resources, Bookings,
+│   │   │                        # ST-Resources, Admin, Profile,
+│   │   │                        # Auth, Notifications
+│   │   ├── components/          # Reusable UI components
+│   │   ├── layouts/             # App layout shell
+│   │   └── styles/              # CSS modules
+│   ├── vite.config.ts           # Dev proxy → microservice ports
+│   ├── nginx.conf               # Production SPA serving
+│   ├── nginx.local.conf         # Docker local reverse proxy
+│   └── Dockerfile               # Multi-stage (build → Nginx)
+├── tests/
+│   ├── cypress/                 # E2E / GUI tests (5 spec files)
+│   ├── unit/                    # Jest unit tests
+│   ├── postman/                 # API integration tests (Newman)
+│   ├── selenium/                # Cross-browser tests
+│   ├── jmeter/                  # Load/performance tests
+│   ├── security/                # OWASP ZAP security scan
+│   ├── usability/               # SUS score calculation
+│   ├── traceability/            # Requirements traceability matrix
+│   └── manual/                  # Manual test cases
+├── k8s/                         # Kubernetes manifests (Kustomize)
+│   ├── base/                    # Base deployments and services
+│   ├── overlays/                # Environment-specific patches
+│   └── argocd/                  # ArgoCD application manifest
+├── docker-compose.local.yml     # Local Docker development
+├── cypress.config.ts            # Cypress E2E configuration
+├── package.json                 # NPM Workspaces root
+├── start_platform.cmd           # Windows batch script launcher
+└── .env                         # Environment variables
 ```
 
 ---
@@ -127,148 +261,153 @@ curl http://localhost/api/v1/tenants/
 
 All endpoints require a Firebase ID token: `Authorization: Bearer <token>`
 
-### Tenants (`/api/v1/tenants/`)
+### Tenants — `/api/v1/tenants`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/v1/tenants/` | Any | List tenants (paginated) |
-| GET | `/api/v1/tenants/:id` | Any | Get tenant by ID |
-| POST | `/api/v1/tenants/` | super_admin | Create tenant |
-| PUT | `/api/v1/tenants/:id` | tenant_admin+ | Update tenant |
-| DELETE | `/api/v1/tenants/:id` | super_admin | Deactivate tenant |
-| GET | `/api/v1/tenants/:id/stats` | tenant_admin+ | Tenant statistics |
+| GET | `/` | Any | List tenants (paginated) |
+| GET | `/:id` | Any | Get tenant by ID |
+| POST | `/` | main_admin | Create tenant |
+| PUT | `/:id` | tenant_admin+ | Update tenant |
+| DELETE | `/:id` | main_admin | Deactivate tenant |
+| GET | `/:id/stats` | tenant_admin+ | Tenant statistics |
 
-### Users (`/api/v1/users/`)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| POST | `/api/v1/users/signup` | Any (Firebase token) | Create profile + set claims |
-| GET | `/api/v1/users/me` | Any | Get own profile |
-| GET | `/api/v1/users/` | tenant_admin+ | List users (paginated) |
-| GET | `/api/v1/users/:uid` | Any | Get user by UID |
-| PUT | `/api/v1/users/:uid` | Self or admin | Update profile |
-| PUT | `/api/v1/users/:uid/role` | tenant_admin+ | Change user role |
-| DELETE | `/api/v1/users/:uid` | tenant_admin+ | Deactivate user |
-
-### Resources (`/api/v1/resources/`)
+### Users — `/api/v1/users`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/v1/resources/` | Any | List resources (paginated, filterable) |
-| GET | `/api/v1/resources/:id` | Any | Get resource |
-| POST | `/api/v1/resources/` | tenant_admin+ | Create resource |
-| PUT | `/api/v1/resources/:id` | tenant_admin+ | Update resource |
-| DELETE | `/api/v1/resources/:id` | tenant_admin+ | Retire resource |
-| GET | `/api/v1/resources/:id/availability` | Any | Check availability by date |
+| POST | `/signup` | Any (Firebase token) | Create profile + set custom claims |
+| GET | `/me` | Any | Get own profile |
+| GET | `/` | tenant_admin+ | List users (paginated) |
+| GET | `/:uid` | Any | Get user by UID |
+| PUT | `/:uid` | Self or admin | Update profile |
+| PUT | `/:uid/role` | tenant_admin+ | Change user role |
+| DELETE | `/:uid` | tenant_admin+ | Deactivate user |
 
-### Bookings (`/api/v1/bookings/`)
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| GET | `/api/v1/bookings/` | Any | List bookings (filterable) |
-| GET | `/api/v1/bookings/:id` | Any | Get booking |
-| POST | `/api/v1/bookings/` | Any | Create booking |
-| PUT | `/api/v1/bookings/:id/approve` | tenant_admin+ | Approve booking |
-| PUT | `/api/v1/bookings/:id/reject` | tenant_admin+ | Reject booking |
-| PUT | `/api/v1/bookings/:id/cancel` | Owner or admin | Cancel booking |
-| GET | `/api/v1/bookings/optimization/stats` | tenant_admin+ | Optimization logs |
-
-### Notifications (`/api/v1/notifications/`)
+### Resources — `/api/v1/resources`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| GET | `/api/v1/notifications/` | Any | Get own notifications |
-| PUT | `/api/v1/notifications/:id/read` | Any | Mark as read |
-| PUT | `/api/v1/notifications/read-all` | Any | Mark all as read |
-| GET | `/api/v1/notifications/unread-count` | Any | Get unread count |
+| GET | `/` | Any | List resources (paginated, filterable) |
+| GET | `/:id` | Any | Get resource details |
+| POST | `/` | tenant_admin+ | Create resource |
+| PUT | `/:id` | tenant_admin+ | Update resource |
+| DELETE | `/:id` | tenant_admin+ | Retire resource |
+| GET | `/:id/availability` | Any | Check availability by date |
+
+### ST Resources (Student P2P) — `/api/v1/st-resources`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/` | Any | List shared student items |
+| POST | `/` | Any | List an item for sharing |
+| PUT | `/:id` | Owner or admin | Update item |
+| DELETE | `/:id` | Owner or admin | Remove item |
+| POST | `/:id/bookings` | Any | Borrow an item |
+| GET | `/:id/bookings` | Any | View bookings for item |
+
+### Bookings — `/api/v1/bookings`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/` | Any | List bookings (filterable) |
+| GET | `/:id` | Any | Get booking details |
+| POST | `/` | Any | Create booking (token-gated for students) |
+| PUT | `/:id/approve` | tenant_admin+ | Approve booking |
+| PUT | `/:id/reject` | tenant_admin+ | Reject booking |
+| PUT | `/:id/cancel` | Owner or admin | Cancel booking |
+| GET | `/optimization/stats` | tenant_admin+ | Optimization logs |
+
+### Notifications — `/api/v1/notifications`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/` | Any | Get own notifications |
+| PUT | `/:id/read` | Any | Mark as read |
+| PUT | `/read-all` | Any | Mark all as read |
+| GET | `/unread-count` | Any | Get unread count |
 
 ---
 
-## Multi-Tenancy
+## Testing
 
-Every user belongs to exactly one tenant (faculty). Data isolation is enforced at two levels:
-
-1. **Application layer** — Every query filters by `tenant_id` from the JWT claims
-2. **Database layer** — Supabase RLS policies scope all queries by `tenant_id`
-
-### Roles
-
-| Role | Permissions |
-|------|-------------|
-| `student` | View resources, create bookings, view own bookings/notifications |
-| `lecturer` | Same as student |
-| `staff` | Same as student |
-| `tenant_admin` | Manage resources, approve/reject bookings, manage users within tenant |
-| `super_admin` | Full access across all tenants |
-
----
-
-## Project Structure
-
-```
-Resource Share/
-├── config/                      # Firebase service account key
-├── docs/                        # Setup guides
-│   ├── firebase-setup.md
-│   └── supabase-firebase-setup.md
-├── infra/                       # Docker + Gateway
-│   ├── docker-compose.yml
-│   ├── Dockerfile.service
-│   ├── .env / .env.example
-│   └── gateway/
-│       ├── nginx.conf
-│       └── ssl/                 # Cloudflare Origin Certificate
-├── scripts/                     # Migration & test scripts
-│   ├── run-migrations.ts
-│   ├── verify-rls.ts
-│   └── test-firebase-claims.ts
-├── services/
-│   ├── shared/                  # @rso/shared — common library
-│   │   └── src/
-│   │       ├── auth-middleware.ts
-│   │       ├── supabase-client.ts
-│   │       ├── redis-client.ts
-│   │       ├── error-handler.ts
-│   │       ├── logger.ts
-│   │       ├── role-guard.ts
-│   │       └── types.ts
-│   ├── tenant-service/
-│   ├── user-service/
-│   ├── resource-service/
-│   ├── booking-service/
-│   └── notification-service/
-├── supabase/
-│   └── migrations/              # 9 ordered SQL migration files
-├── package.json                 # npm workspaces root
-└── tsconfig.base.json
-```
-
----
-
-## Development
+The platform includes a comprehensive multi-layer testing strategy:
 
 ```bash
-# Build all services
-npm run build --workspaces
+# Unit tests (Jest)
+npm test
 
-# Run a single service locally (without Docker)
-npm run dev -w services/tenant-service
+# GUI / E2E tests (Cypress)
+npx cypress run                    # Headless
+npx cypress open                   # Interactive
 
-# Run Firebase claims test
-npx tsx scripts/test-firebase-claims.ts
+# API integration tests (Postman/Newman)
+npm run test:api
 
-# Run RLS verification
-npx tsx scripts/verify-rls.ts
+# Cross-browser tests (Selenium)
+npm run test:crossbrowser
+
+# Load/performance tests (JMeter)
+npm run test:load
+npm run test:load:smoke
+
+# Accessibility tests (axe-core via Cypress)
+npm run test:a11y
+
+# Security scan (OWASP ZAP)
+npm run test:security
+
+# Usability score (SUS)
+npm run test:sus
+
+# Traceability matrix
+npm run test:matrix
+npm run test:matrix:md
 ```
+
+> **Note:** For Cypress GUI tests, copy `cypress.env.example.json` to `cypress.env.json` and fill in test account credentials.
+
+---
+
+## Database Schema
+
+The platform uses 8 core tables with Row Level Security (RLS):
+
+| Table | Purpose |
+|-------|---------|
+| `tenants` | Faculties/departments (multi-tenancy root) |
+| `user_profiles` | Firebase UID mapping, roles, tenant association |
+| `resources` | Official faculty resources (halls, labs, equipment) |
+| `bookings` | Reservations with GiST exclusion constraint (no overlaps) |
+| `notifications` | In-app notification inbox |
+| `optimization_logs` | Resource utilization analytics |
+| `student_token_balances` | Monthly token wallet (100 tokens/month) |
+| `token_transactions` | Double-entry ledger for token movements |
+| `st_resources` | Student peer-to-peer shared items |
+| `st_bookings` | P2P borrowing records |
+
+---
+
+## Rate Limiting
+
+Enforced at the Nginx API Gateway level with three zones:
+
+| Zone | Rate | Applied To |
+|------|------|-----------|
+| `api_auth` | 3 req/s per IP | `/api/v1/users/signup` |
+| `api_booking_write` | 5 req/s per IP | `/api/v1/bookings` (POST) |
+| `api_general` | 10 req/s per IP | All other API routes |
+
+Exceeding the limit returns HTTP `429 Too Many Requests`.
 
 ---
 
 ## Cloudflare DNS Setup
 
-1. Add an **A record** pointing `pro.isuruhub.site` to your server's IP
+1. Add an **A record** pointing your domain to the server IP
 2. Set SSL/TLS mode to **Full (Strict)**
 3. Generate an **Origin Certificate** in Cloudflare dashboard
-4. Save the certificate and key to `infra/gateway/ssl/origin.pem` and `origin-key.pem`
+4. Save the certificate and key to `backend/infra/gateway/ssl/origin.pem` and `origin-key.pem`
 
 ---
 
