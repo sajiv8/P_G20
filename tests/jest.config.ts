@@ -8,7 +8,6 @@ const config: Config = {
   moduleNameMapper: {
     '^@rso/shared$': '<rootDir>/../backend/services/shared/src/index',
   },
-  setupFilesAfterSetup: ['./helpers/test-fixtures.ts'],
   collectCoverageFrom: [
     '../backend/services/**/src/**/*.ts',
     '!**/node_modules/**',
