@@ -23,6 +23,14 @@ approve the permission prompt. The execution log prints four links: the one you
 share with testers, the long form URL, the form editor, and the results
 spreadsheet.
 
+**Run `createSusForm` once and once only.** It builds a new form and a new
+spreadsheet every time and cannot adopt the ones you already have, so a second
+run strands your responses in the old file behind a form nobody is answering.
+It now refuses to run when a response spreadsheet already exists; every other
+function in the file works on the study you already have. If you have already
+run it twice, `listSusFiles` prints every form and spreadsheet with its id,
+creation date and response count so you can tell which pair to keep.
+
 The form is three pages — four demographic questions, the ten SUS statements as
 1–5 scales, then six open questions. The statements are Brooke's originals in
 their original order; odd items are positive and even items are negative, and
@@ -36,6 +44,17 @@ you have responses, run `addCharts` to draw the charts.
 The scoring reproduces all 20 participant scores and the 64.5 average from the
 Satori reference workbook exactly, and uses the same Sauro-Lewis grade bands as
 `sus-score.mjs`, so the two never disagree.
+
+**If the SUS Analysis sheet sits on zero while responses are arriving**, run
+`repairAnalysisSheet` from the same script project. Google creates the response
+tab a moment after the form is linked, so on a first run the scoring formulas
+can be written against a tab name or column letters that were still a guess —
+and a wrong guess reads as blank rather than as an error, which is why the
+sheet looks fine and stays empty. The repair rebuilds the formulas against the
+response tab as it actually is, and prints the tab name, the response count and
+the full header row to the Execution log so you can see what it matched. It
+picks the spreadsheet holding the most responses; if that is the wrong one,
+paste the right id into `SHEET_ID` at the top of the script and run it again.
 
 If you would rather not work in Sheets, export the responses as CSV, reshape
 them to match `responses.example.csv`, and run the CLI scorer instead:
