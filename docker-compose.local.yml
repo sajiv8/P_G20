@@ -190,6 +190,8 @@ services:
     container_name: rso-frontend
     ports:
       - "5173:80"
+    volumes:
+      - ./frontend/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - rso-local
     restart: unless-stopped
